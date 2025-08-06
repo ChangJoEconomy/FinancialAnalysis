@@ -24,8 +24,6 @@ const getSettingsPage = asyncHandler(async (req, res) => {
         // 나머지는 알파벳 순으로 정렬
         return a.preset_name.localeCompare(b.preset_name, 'ko');
     });
-
-    console.log('User presets:', defaultPreset);
     
     res.render('settings', { 
         title: '개인설정',

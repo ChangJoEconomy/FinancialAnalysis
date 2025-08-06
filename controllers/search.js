@@ -38,7 +38,6 @@ const searchStocksFromJSON = (keyword) => {
 // @route GET /search
 const getSearchResults = asyncHandler(async (req, res) => {
     const stock = req.query.stock || '';
-    console.log(`Searching for: ${stock}`);
     const page = parseInt(req.query.page) || 1;
     const itemsPerPage = 10; // 페이지당 10개 항목
     let results = [];
