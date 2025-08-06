@@ -1,0 +1,415 @@
+<link rel="stylesheet" href="/css/settings.css">
+<div class="settings-container">
+  <div class="settings-sidebar">
+    <button class="settings-tab<% if (typeof error_type !== 'undefined' && error_type === 'change-password') { %><% } else { %> active<% } %>" data-tab="preset">프리셋 설정</button>
+    <button class="settings-tab<% if (typeof error_type !== 'undefined' && error_type === 'change-password') { %> active<% } %>" data-tab="password">비밀번호 설정</button>
+  </div>
+  <div class="settings-content">
+    <div id="preset" class="settings-pane<% if (typeof error_type !== 'undefined' && error_type === 'change-password') { %><% } else { %> active<% } %>">
+      <h2>프리셋 설정</h2>
+      
+      <!-- 프리셋 목록 섹션 -->
+      <div class="preset-list-section">
+        <div class="preset-list-header">
+          <h3>내 프리셋 목록</h3>
+          <button type="button" class="preset-add-btn" onclick="showPresetForm()">
+            <i class="fas fa-plus"></i> 새 프리셋 추가
+          </button>
+        </div>
+        
+        <!-- 기본 프리셋 설정 -->
+        <div class="default-preset-section">
+          <label for="defaultPresetSelect">기본 프리셋 선택:</label>
+          <select id="defaultPresetSelect" class="default-preset-select">
+            <% if (presets && presets.length > 0) { %>
+              <% presets.forEach((preset, index) => { %>
+                <option value="<%= preset.preset_name %>" 
+                  <% if (defaultPreset ? (defaultPreset === preset.preset_name) : (index === 0)) { %> selected<% } %>>
+                  <%= preset.preset_name %>
+                </option>
+              <% }); %>
+            <% } else { %>
+              <option value="">프리셋이 없습니다</option>
+            <% } %>
+          </select>
+          <button type="button" class="default-preset-btn" onclick="setDefaultPreset()">
+            <i class="fas fa-star"></i> 기본으로 설정
+          </button>
+        </div>
+        
+        <div class="preset-list">
+          <% if (presets && presets.length > 0) { %>
+            <% presets.forEach(preset => { %>
+              <div class="preset-item" data-preset-name="<%= preset.preset_name %>">
+                <div class="preset-info">
+                  <h4>
+                    <%= preset.preset_name %>
+                    <% if (defaultPreset && defaultPreset === preset.preset_name) { %>
+                      <span class="default-badge">기본</span>
+                    <% } %>
+                  </h4>
+                  <p><%= preset.description %></p>
+                </div>
+                <div class="preset-actions">
+                  <button type="button" class="preset-edit-btn" onclick="editPreset('<%= preset.preset_name %>')">
+                    <i class="fas fa-edit"></i> 수정
+                  </button>
+                  <button type="button" class="preset-delete-btn" 
+                    onclick="deletePreset('<%= preset.preset_name %>')"
+                    <% if (defaultPreset && defaultPreset === preset.preset_name) { %> disabled title="기본 프리셋은 삭제할 수 없습니다"<% } %>>
+                    <i class="fas fa-trash"></i> 삭제
+                  </button>
+                </div>
+              </div>
+            <% }); %>
+          <% } else { %>
+            <!-- 프리셋이 없을 때 표시 -->
+            <div class="preset-empty">
+              <p>아직 생성된 프리셋이 없습니다.</p>
+              <p>새 프리셋을 추가해보세요!</p>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- 프리셋 폼 섹션 (숨겨진 상태) -->
+      <div class="preset-form-section" style="display: none;">
+        <div class="preset-form-header">
+          <h3 id="preset-form-title">새 프리셋 추가</h3>
+          <button type="button" class="preset-cancel-btn" onclick="hidePresetForm()">
+            <i class="fas fa-times"></i> 취소
+          </button>
+        </div>
+        
+        <form class="preset-form" id="presetForm">
+          <!-- 숨겨진 모드 입력 필드 -->
+          <input type="hidden" id="presetMode" name="mode" value="add">
+          
+          <div class="preset-name-input">
+            <label for="presetName">프리셋 이름</label>
+            <input type="text" id="presetName" name="preset_name" placeholder="프리셋 이름을 입력하세요" required>
+          </div>
+          
+          <div class="preset-description-input">
+            <label for="presetDescription">프리셋 메모</label>
+            <textarea id="presetDescription" name="description" placeholder="프리셋에 대한 설명을 입력하세요 (예: 위험도가 낮은 보수적인 투자 기준)" rows="3"></textarea>
+          </div>
+          
+          <table class="preset-table">
+            <thead>
+              <tr>
+                <th>항목</th>
+                <th>경고<br><span class="preset-hint">미만</span></th>
+                <th>위험<br><span class="preset-hint">미만</span></th>
+                <th>주의<br><span class="preset-hint">미만</span></th>
+                <th>안전<br><span class="preset-hint">이상</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>당기순이익</td><td class="warning"><input type="number" name="netIncome_warning" class="preset-input"> <span class="preset-hint">미만</span></td><td class="danger"><input type="number" name="netIncome_danger" class="preset-input"> <span class="preset-hint">미만</span></td><td class="caution"><input type="number" name="netIncome_caution" class="preset-input caution-input" data-row="netIncome"> <span class="preset-hint">미만</span></td><td class="safe"><input type="number" class="preset-input safe-input" id="netIncome_safe_value" name="netIncome_safe" value="" readonly> <span class="preset-hint">이상</span></td></tr>
+              <tr><td>시가총액</td><td class="warning"><input type="number" name="marketCap_warning" class="preset-input"> <span class="preset-hint">초과</span></td><td class="danger"><input type="number" name="marketCap_danger" class="preset-input"> <span class="preset-hint">초과</span></td><td class="caution"><input type="number" name="marketCap_caution" class="preset-input caution-input" data-row="marketCap"> <span class="preset-hint">초과</span></td><td class="safe"><input type="number" class="preset-input safe-input" id="marketCap_safe_value" name="marketCap_safe" value="" readonly> <span class="preset-hint">이하</span></td></tr>
+              <tr><td>PER</td><td class="warning"><input type="number" name="per_warning" class="preset-input"> <span class="preset-hint">초과</span></td><td class="danger"><input type="number" name="per_danger" class="preset-input"> <span class="preset-hint">초과</span></td><td class="caution"><input type="number" name="per_caution" class="preset-input caution-input" data-row="per"> <span class="preset-hint">초과</span></td><td class="safe"><input type="number" class="preset-input safe-input" id="per_safe_value" name="per_safe" value="" readonly> <span class="preset-hint">이하</span></td></tr>
+              <tr><td>부채비율</td><td class="warning"><input type="number" name="debt_warning" class="preset-input"> <span class="preset-hint">초과</span></td><td class="danger"><input type="number" name="debt_danger" class="preset-input"> <span class="preset-hint">초과</span></td><td class="caution"><input type="number" name="debt_caution" class="preset-input caution-input" data-row="debt"> <span class="preset-hint">초과</span></td><td class="safe"><input type="number" class="preset-input safe-input" id="debt_safe_value" name="debt_safe" value="" readonly> <span class="preset-hint">이하</span></td></tr>
+              <tr><td>당좌비율</td><td class="warning"><input type="number" name="quick_warning" class="preset-input"> <span class="preset-hint">미만</span></td><td class="danger"><input type="number" name="quick_danger" class="preset-input"> <span class="preset-hint">미만</span></td><td class="caution"><input type="number" name="quick_caution" class="preset-input caution-input" data-row="quick"> <span class="preset-hint">미만</span></td><td class="safe"><input type="number" class="preset-input safe-input" id="quick_safe_value" name="quick_safe" value="" readonly> <span class="preset-hint">이상</span></td></tr>
+              <tr><td>시가배당률</td><td class="warning"><input type="number" step="0.1" name="dividend_warning" class="preset-input"> <span class="preset-hint">미만</span></td><td class="danger"><input type="number" step="0.1" name="dividend_danger" class="preset-input"> <span class="preset-hint">미만</span></td><td class="caution"><input type="number" step="0.1" name="dividend_caution" class="preset-input caution-input" data-row="dividend"> <span class="preset-hint">미만</span></td><td class="safe"><input type="number" step="0.1" class="preset-input safe-input" id="dividend_safe_value" name="dividend_safe" value="" readonly> <span class="preset-hint">이상</span></td></tr>
+            </tbody>
+          </table>
+          <div class="preset-notice">
+            <ul>
+              <li>PER은 음수의 경우 자동으로 경고 처리됩니다.</li>
+              <li>안전 수치는 주의 수치에 따라 자동 조정됩니다. (입력불가)</li>
+            </ul>
+          </div>
+          <button type="submit" class="preset-btn">프리셋 저장</button>
+        </form>
+      </div>
+    </div>
+    <div id="password" class="settings-pane<% if (typeof error_type !== 'undefined' && error_type === 'change-password') { %> active<% } %>">
+      <h2>비밀번호 변경</h2>
+      <% if (typeof error !== 'undefined' && error_type === 'change-password') { %>
+        <div class="error-message">
+          <i class="fas fa-exclamation-triangle"></i>
+          <%= error %>
+        </div>
+      <% } %>
+    <form action="/settings/change-password" method="POST" class="password-form">
+      <label for="currentPassword">현재 비밀번호</label>
+      <input type="password" id="currentPassword" name="currentPassword" autocomplete="current-password" required>
+      <label for="newPassword">새 비밀번호</label>
+      <input type="password" id="newPassword" name="newPassword" autocomplete="new-password" required>
+      <label for="confirmPassword">비밀번호 확인</label>
+      <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password" required>
+      <button type="submit" class="change-btn">비밀번호 변경</button>
+    </form>
+    </div>
+  </div>
+</div>
+<script>
+// 탭 전환 스크립트
+const tabs = document.querySelectorAll('.settings-tab');
+const panes = document.querySelectorAll('.settings-pane');
+tabs.forEach(tab => {
+  tab.addEventListener('click', function() {
+    tabs.forEach(t => t.classList.remove('active'));
+    panes.forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById(this.dataset.tab).classList.add('active');
+  });
+});
+
+// 주의 칸과 안전 칸 연동 스크립트
+document.querySelectorAll('.caution-input').forEach(function(input) {
+  input.addEventListener('input', function() {
+    const row = this.dataset.row;
+    const value = this.value;
+    const safeInput = document.getElementById(row + '_safe_value');
+    if (safeInput) safeInput.value = value ? value : '';
+  });
+});
+
+// 전역 변수
+let isEditMode = false;
+let editingPresetName = '';
+
+// 프리셋 폼 표시/숨김 기능
+function showPresetForm(mode = 'add', presetName = '') {
+  document.querySelector('.preset-list-section').style.display = 'none';
+  document.querySelector('.preset-form-section').style.display = 'block';
+  
+  const formTitle = document.getElementById('preset-form-title');
+  const presetNameInput = document.getElementById('presetName');
+  const presetModeInput = document.getElementById('presetMode');
+  
+  if (mode === 'add') {
+    isEditMode = false;
+    editingPresetName = '';
+    formTitle.textContent = '새 프리셋 추가';
+    presetNameInput.value = '';
+    presetNameInput.readOnly = false;
+    presetModeInput.value = 'add';
+    clearPresetForm();
+  } else if (mode === 'edit') {
+    isEditMode = true;
+    editingPresetName = presetName;
+    formTitle.textContent = '프리셋 수정';
+    presetNameInput.value = presetName;
+    presetNameInput.readOnly = true;
+    presetModeInput.value = 'edit';
+    loadPresetData(presetName);
+  }
+}
+
+function hidePresetForm() {
+  document.querySelector('.preset-list-section').style.display = 'block';
+  document.querySelector('.preset-form-section').style.display = 'none';
+  document.getElementById('presetName').readOnly = false;
+  isEditMode = false;
+  editingPresetName = '';
+  clearPresetForm();
+}
+
+// 새 프리셋 폼 초기화
+function clearPresetForm() {
+  // 프리셋 메모 초기화
+  document.getElementById('presetDescription').value = '';
+  
+  // 기본값 설정
+  const defaultValues = {
+    // 당기순이익 (값이 클수록 좋음: 경고 < 위험 < 주의)
+    netIncome_warning: -5,
+    netIncome_danger: -1,
+    netIncome_caution: 0,
+    
+    // 시가총액 (값이 작을수록 좋음: 경고 > 위험 > 주의)
+    marketCap_warning: 6000,
+    marketCap_danger: 4000,
+    marketCap_caution: 2000,
+    
+    // PER (값이 작을수록 좋음: 경고 > 위험 > 주의)
+    per_warning: 100,
+    per_danger: 50,
+    per_caution: 20,
+    
+    // 부채비율 (값이 작을수록 좋음: 경고 > 위험 > 주의)
+    debt_warning: 200,
+    debt_danger: 150,
+    debt_caution: 100,
+    
+    // 당좌비율 (값이 클수록 좋음: 경고 < 위험 < 주의)
+    quick_warning: 50,
+    quick_danger: 75,
+    quick_caution: 100,
+    
+    // 시가배당률 (값이 클수록 좋음: 경고 < 위험 < 주의)
+    dividend_warning: 1,
+    dividend_danger: 2,
+    dividend_caution: 4
+  };
+  
+  // 각 입력 필드에 기본값 설정
+  Object.keys(defaultValues).forEach(fieldName => {
+    const input = document.querySelector(`input[name="${fieldName}"]`);
+    if (input) {
+      input.value = defaultValues[fieldName];
+    }
+  });
+  
+  // 안전 수치 자동 계산 트리거
+  document.querySelectorAll('.caution-input').forEach(input => {
+    const event = new Event('input');
+    input.dispatchEvent(event);
+  });
+}
+
+// 프리셋 데이터 로드 (수정 모드용)
+async function loadPresetData(presetName) {
+  try {
+    const response = await fetch(`/settings/preset/${encodeURIComponent(presetName)}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      const preset = data.preset;
+      
+      // 폼에 데이터 채우기
+      document.getElementById('presetDescription').value = preset.description;
+      
+      // 각 수치 필드에 데이터 채우기
+      const fields = [
+        'netIncome_warning', 'netIncome_danger', 'netIncome_caution',
+        'marketCap_warning', 'marketCap_danger', 'marketCap_caution',
+        'per_warning', 'per_danger', 'per_caution',
+        'debt_warning', 'debt_danger', 'debt_caution',
+        'quick_warning', 'quick_danger', 'quick_caution',
+        'dividend_warning', 'dividend_danger', 'dividend_caution'
+      ];
+      
+      fields.forEach(field => {
+        const input = document.querySelector(`input[name="${field}"]`);
+        if (input && preset[field] !== undefined) {
+          input.value = preset[field];
+        }
+      });
+      
+      // 안전 수치 자동 계산 트리거
+      document.querySelectorAll('.caution-input').forEach(input => {
+        const event = new Event('input');
+        input.dispatchEvent(event);
+      });
+    } else {
+      alert('프리셋 데이터를 불러올 수 없습니다: ' + data.message);
+    }
+  } catch (error) {
+    console.error('Error loading preset:', error);
+    alert('프리셋 데이터를 불러오는 중 오류가 발생했습니다.');
+  }
+}
+
+function editPreset(presetName) {
+  showPresetForm('edit', presetName);
+}
+
+// 기본 프리셋 설정 함수
+async function setDefaultPreset() {
+  const select = document.getElementById('defaultPresetSelect');
+  const presetName = select.value;
+  
+  if (!presetName) {
+    alert('기본으로 설정할 프리셋을 선택해주세요.');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/settings/default-preset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ preset_name: presetName })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert(data.message);
+      // 페이지 새로고침하여 UI 업데이트
+      window.location.reload();
+    } else {
+      alert('오류: ' + data.message);
+    }
+  } catch (error) {
+    console.error('Error setting default preset:', error);
+    alert('기본 프리셋 설정 중 오류가 발생했습니다.');
+  }
+}
+
+async function deletePreset(presetName) {
+  if (!confirm(`"${presetName}" 프리셋을 삭제하시겠습니까?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/settings/preset/${encodeURIComponent(presetName)}`, {
+      method: 'DELETE'
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('프리셋이 삭제되었습니다.');
+      // 페이지 새로고침하여 목록 업데이트
+      window.location.reload();
+    } else {
+      alert('프리셋 삭제 실패: ' + data.message);
+    }
+  } catch (error) {
+    console.error('Error deleting preset:', error);
+    alert('프리셋 삭제 중 오류가 발생했습니다.');
+  }
+}
+
+// 프리셋 폼 제출 처리
+document.getElementById('presetForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  // 폼 유효성 검사
+  const presetName = document.getElementById('presetName').value.trim();
+  const presetDescription = document.getElementById('presetDescription').value.trim();
+  
+  if (!presetName) {
+    alert('프리셋 이름을 입력해주세요.');
+    return;
+  }
+  
+  if (!presetDescription) {
+    alert('프리셋 메모를 입력해주세요.');
+    return;
+  }
+  
+  // 폼 데이터 수집
+  const formData = new FormData(this);
+  
+  try {
+    const response = await fetch('/settings/preset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(Object.fromEntries(formData))
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert(data.message);
+      hidePresetForm();
+      // 페이지 새로고침하여 목록 업데이트
+      window.location.reload();
+    } else {
+      alert('오류: ' + data.message);
+    }
+  } catch (error) {
+    console.error('Error saving preset:', error);
+    alert('프리셋 저장 중 오류가 발생했습니다.');
+  }
+});
+</script>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title || 'Finance Analysis' %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="header-title" style="text-decoration:none;color:inherit;">
+            재무제표 분석
+        </a>
+        <nav class="nav-menu">
+            <a href="/"><button class="nav-btn">홈</button></a>
+            <a href="/my-stocks"><button class="nav-btn">내 종목</button></a>
+            <a href="/settings"><button class="nav-btn">개인설정</button></a>
+        </nav>
+        <div class="auth-section">
+            <% if (isAuthenticated && user) { %>
+                <span class="user-name">안녕하세요, <%= user.user_id %>님</span>
+            <% } %>
+            <a href="<%= isAuthenticated ? '/logout' : '/login' %>">
+                <button class="login-btn" id="loginBtn">
+                    <%= isAuthenticated ? '로그아웃' : '로그인' %>
+                </button>
+            </a>
+        </div>
+    </header>
+    
+    <%- body %>
+    
+</body>
+</html>

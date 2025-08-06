@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="/css/login.css">
+
+<!-- 메인 컨테이너 -->
+<main class="main-container">
+    <div class="content-wrapper">
+        <div class="content-card">
+            <h2>회원가입</h2>
+            <!-- 에러 메시지 표시 -->
+            <% if (locals.error) { %>
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <%= error %>
+                </div>
+            <% } %>
+            
+            <form action="/register" method="POST" id="register-form" class="auth-form">
+                <div class="form-group">
+                    <label for="register-user-id">
+                        <i class="fas fa-id-card"></i>
+                        사용자 ID
+                    </label>
+                    <input type="text" id="register-user-id" name="user_id" class="form-input" placeholder="사용자 ID를 입력하세요" value="<%= locals.formData ? formData.user_id || '' : '' %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">
+                        <i class="fas fa-lock"></i>
+                        비밀번호
+                    </label>
+                    <input type="password" id="register-password" name="password" class="form-input" placeholder="비밀번호를 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password-confirm">
+                        <i class="fas fa-lock"></i>
+                        비밀번호 확인
+                    </label>
+                    <input type="password" id="register-password-confirm" name="password_confirm" class="form-input" placeholder="비밀번호를 다시 입력하세요" required>
+                </div>
+                <button type="submit" class="primary-btn full-width">
+                    <i class="fas fa-user-plus"></i>
+                    회원가입
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>이미 계정이 있으신가요? <a href="/login" class="link-btn">로그인</a></p>
+            </div>
+        </div>
+    </div>
+</main>

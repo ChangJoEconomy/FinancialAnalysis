@@ -1,0 +1,156 @@
+/* 로그인 페이지 스타일 */
+.main-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    padding: 40px 20px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.content-wrapper {
+    width: 100%;
+}
+
+.content-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 40px 32px;
+}
+
+h2 {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #222;
+    margin-top: 0;
+    margin-bottom: 24px;
+}
+
+.error-message {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.error-message i {
+    color: #dc2626;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #222;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-group label i {
+    color: #222;
+    width: 16px;
+}
+
+.form-input {
+    font-size: 1rem;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus {
+    border-color: #222;
+}
+
+.primary-btn {
+    background: #222;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.primary-btn:hover {
+    background: #444;
+}
+
+.primary-btn i {
+    color: #fff;
+}
+
+.full-width {
+    width: 100%;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.auth-footer p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.link-btn {
+    color: #222;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.link-btn:hover {
+    text-decoration: underline;
+}
+
+/* 로그인 페이지에서 헤더 로그인 버튼 숨김 */
+.header .login-btn {
+    display: none;
+}
+
+/* 반응형 */
+@media (max-width: 600px) {
+    .main-container {
+        padding: 20px 16px;
+    }
+    
+    .content-card {
+        padding: 24px 20px;
+    }
+    
+    .page-title {
+        font-size: 1.8rem;
+    }
+}

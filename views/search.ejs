@@ -1,0 +1,118 @@
+<link rel="stylesheet" href="/css/search.css">
+
+<div class="search-page">
+    <!-- 검색창 -->
+    <div class="search-container">
+        <form id="searchForm" class="search-form">
+            <div class="search-input-group">
+                <input type="text" 
+                       class="search-input" 
+                       id="stockInput" 
+                       placeholder="종목명 또는 종목코드를 입력하세요" 
+                       value="<%= stock || '' %>" 
+                       required />
+                <button type="submit" class="search-btn">검색</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 검색 결과 영역 -->
+    <div class="search-results">
+        <% if (stock && results.length > 0) { %>
+            <div class="results-header">
+                <span class="results-count">총 <%= totalResults %>개 종목 (페이지 <%= currentPage %>/<%= totalPages %>)</span>
+            </div>
+            <div class="stock-list">
+                <% results.forEach(function(item) { %>
+                    <div class="stock-item" onclick="selectStock('<%= item.code %>', '<%= item.name %>')">
+                        <div class="stock-main">
+                            <div class="stock-name"><%= item.name %></div>
+                            <div class="stock-code"><%= item.code %></div>
+                        </div>
+                        <div class="stock-market">
+                            <div class="market-type"><%= item.market %></div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+            
+            <!-- 페이지네이션 -->
+            <% if (totalPages > 1) { %>
+                <div class="pagination">
+                    <!-- 이전 페이지 -->
+                    <% if (currentPage > 1) { %>
+                        <a href="/search?stock=<%= encodeURIComponent(stock) %>&page=<%= currentPage - 1 %>" class="page-btn prev-btn">‹ 이전</a>
+                    <% } %>
+                    
+                    <!-- 페이지 번호들 -->
+                    <div class="page-numbers">
+                        <% 
+                            // 모바일에서는 더 적은 페이지 번호 표시
+                            let pageRange = 1; // 현재 페이지 기준 좌우 1개씩만 표시
+                            let startPage = Math.max(1, currentPage - pageRange);
+                            let endPage = Math.min(totalPages, currentPage + pageRange);
+                            
+                            if (startPage > 1) { %>
+                                <a href="/search?stock=<%= encodeURIComponent(stock) %>&page=1" class="page-btn">1</a>
+                                <% if (startPage > 2) { %>
+                                    <span class="page-dots">...</span>
+                                <% } %>
+                            <% }
+                            
+                            for (let i = startPage; i <= endPage; i++) { %>
+                                <a href="/search?stock=<%= encodeURIComponent(stock) %>&page=<%= i %>" 
+                                   class="page-btn <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+                            <% }
+                            
+                            if (endPage < totalPages) { %>
+                                <% if (endPage < totalPages - 1) { %>
+                                    <span class="page-dots">...</span>
+                                <% } %>
+                                <a href="/search?stock=<%= encodeURIComponent(stock) %>&page=<%= totalPages %>" class="page-btn"><%= totalPages %></a>
+                            <% } %>
+                    </div>
+                    
+                    <!-- 다음 페이지 -->
+                    <% if (currentPage < totalPages) { %>
+                        <a href="/search?stock=<%= encodeURIComponent(stock) %>&page=<%= currentPage + 1 %>" class="page-btn next-btn">다음 ›</a>
+                    <% } %>
+                </div>
+            <% } %>
+        <% } else if (stock && results.length === 0) { %>
+            <div class="no-results">
+                <div class="no-results-icon">🔍</div>
+                <p>검색 결과가 없습니다.</p>
+                <p class="suggestion">다른 키워드로 검색해보세요.</p>
+            </div>
+        <% } else { %>
+            <div class="search-guide">
+                <div class="guide-icon">💡</div>
+                <h3>종목 검색 가이드</h3>
+                <ul>
+                    <li>회사명의 일부만 입력해도 검색됩니다 (예: "LG", "삼성")</li>
+                    <li>종목코드로도 검색 가능합니다 (예: "066570")</li>
+                    <li>검색 결과를 클릭하면 상세 정보를 볼 수 있습니다</li>
+                </ul>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<script>
+    // 검색 이벤트
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const stock = document.getElementById('stockInput').value.trim();
+        if(stock) {
+            window.location.href = `/search?stock=${encodeURIComponent(stock)}`;
+        }
+    });
+
+    // 종목 선택 시 상세 페이지로 이동
+    function selectStock(code, name) {
+        // 종목 상세 페이지로 이동
+        const marketElement = event.currentTarget.querySelector('.market-type');
+        const market = marketElement ? marketElement.textContent : '';
+        window.location.href = `/stock-details?market=${encodeURIComponent(market)}&code=${encodeURIComponent(code)}&name=${encodeURIComponent(name)}`;
+    }
+</script>

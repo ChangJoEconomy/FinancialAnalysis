@@ -1,0 +1,17 @@
+<div class="center-box">
+    <div class="logo">Financial Analysis</div>
+    <form id="searchForm" class="search-form">
+        <input type="text" class="search-input" id="stockInput" placeholder="종목명 또는 코드를 입력하세요" required />
+        <button type="submit" class="search-btn">검색</button>
+    </form>
+<script>
+    // 검색 이벤트: 종목명을 쿼리로 /search로 이동
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const stock = document.getElementById('stockInput').value.trim();
+        if(stock) {
+            window.location.href = `/search?stock=${encodeURIComponent(stock)}`;
+        }
+    });
+</script>
+</div>

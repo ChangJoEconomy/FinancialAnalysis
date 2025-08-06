@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="/css/login.css">
+
+<!-- 메인 컨테이너 -->
+<main class="main-container">
+    <div class="content-wrapper">
+        <div class="content-card">
+            <h2>로그인</h2>
+            <!-- 에러 메시지 표시 -->
+            <% if (locals.error) { %>
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <%= error %>
+                </div>
+            <% } %>
+            
+            <form action="/login" method="POST" id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="login-user-id">
+                        <i class="fas fa-id-card"></i>
+                        사용자 ID
+                    </label>
+                    <input type="text" id="login-user-id" name="user_id" class="form-input" placeholder="사용자 ID를 입력하세요" value="<%= locals.formData ? formData.user_id || '' : '' %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">
+                        <i class="fas fa-lock"></i>
+                        비밀번호
+                    </label>
+                    <input type="password" id="login-password" name="password" class="form-input" placeholder="비밀번호를 입력하세요" required>
+                </div>
+                <button type="submit" class="primary-btn full-width">
+                    <i class="fas fa-sign-in-alt"></i>
+                    로그인
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>아직 계정이 없으신가요? <a href="/register" class="link-btn">회원가입</a></p>
+            </div>
+        </div>
+    </div>
+</main>

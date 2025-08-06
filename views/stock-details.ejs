@@ -1,0 +1,233 @@
+<link rel="stylesheet" href="/css/stock-details.css">
+
+<div class="detail-container">
+    <!-- 주식 기본 정보 헤더 -->
+    <div class="stock-header">
+        <div class="stock-basic-info">
+            <h1 class="stock-name"><%= stock.name %></h1>
+            <div class="stock-meta">
+                <span class="stock-code"><%= stock.code %></span>
+                <span class="stock-market">
+                    <span class="market-badge"><%= stock.market %></span>
+                </span>
+                
+                <!-- 내 종목 추가/제거 버튼 -->
+                <% if (user) { %>
+                    <% if (isFavorite) { %>
+                        <button id="favoriteBtn" class="favorite-btn remove compact" onclick="toggleFavoriteStock(false)">
+                            <i class="fas fa-star"></i> 제거
+                        </button>
+                    <% } else { %>
+                        <button id="favoriteBtn" class="favorite-btn add compact" onclick="toggleFavoriteStock(true)">
+                            <i class="far fa-star"></i> 추가
+                        </button>
+                    <% } %>
+                <% } %>
+            </div>
+        </div>
+        
+        <div class="stock-right-section">
+            <!-- 현재가 정보 -->
+            <div class="price-info">
+                <div class="current-price">
+                    <%= stock.currentPrice.toLocaleString() %>원
+                </div>
+                <div class="price-change <%= stock.changeRate >= 0 ? 'positive' : 'negative' %>">
+                    <span class="change-amount">
+                        <%= stock.changeRate >= 0 ? '+' : '' %>
+                        <%= stock.changeAmount.toLocaleString() %>원
+                    </span>
+                    <span class="change-rate">
+                        (<%= stock.changeRate >= 0 ? '+' : '' %><%= stock.changeRate.toFixed(2) %>%)
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 주식 차트 -->
+    <div class="chart-section">
+        <h2>주가 차트</h2>
+        <div class="chart-container">
+            <canvas id="stockChart" width="800" height="400"></canvas>
+        </div>
+    </div>
+
+    <!-- 재무 정보 섹션 -->
+    <div class="financial-section">
+        <h2>재무 정보</h2>
+        <div class="financial-grid">
+
+            <!-- 시가총액 -->
+            <div class="financial-item">
+                <div class="financial-header">
+                    <span class="financial-label">시가총액</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.marketCap, 'marketCap') %>"></div>
+                </div>
+                <div class="financial-value">
+                    ₩<%= stock.financials.marketCap.toLocaleString() %>조
+                </div>
+                <div class="financial-desc">업계 평균 대비 <%= stock.financials.marketCapRank %>위</div>
+            </div>
+
+            <!-- 당기순이익 -->
+            <div class="financial-item">
+                <div class="financial-header">
+                    <span class="financial-label">당기순이익</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.netIncome, 'netIncome') %>"></div>
+                </div>
+                <div class="financial-value">
+                    ₩<%= stock.financials.netIncome.toLocaleString() %>억
+                </div>
+                <div class="financial-desc">전년 대비 <%= stock.financials.netIncomeGrowth >= 0 ? '+' : '' %><%= stock.financials.netIncomeGrowth.toFixed(1) %>%</div>
+            </div>
+
+            <!-- 미래 PER -->
+            <div class="financial-item">
+                <div class="financial-header">
+                    <span class="financial-label">미래 PER</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.futurePER) %>"></div>
+                </div>
+                <div class="financial-value"><%= stock.financials.futurePER.toFixed(1) %>배</div>
+                <div class="financial-desc">업계 평균: <%= stock.financials.industryAvgPER.toFixed(1) %>배</div>
+            </div>
+
+            <!-- 재무비율 (ROE) -->
+            <div class="financial-item">
+                <div class="financial-header">
+                    <span class="financial-label">ROE</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.roe) %>"></div>
+                </div>
+                <div class="financial-value"><%= stock.financials.roe.toFixed(1) %>%</div>
+                <div class="financial-desc">자기자본이익률</div>
+            </div>
+
+            <!-- 유상증자 -->
+            <div class="financial-item">
+                <div class="financial-header">
+                    <span class="financial-label">유상증자</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.paidInCapital) %>"></div>
+                </div>
+                <div class="financial-value">
+                    <% if (stock.financials.hasRecentCapitalIncrease) { %>
+                        예정
+                    <% } else { %>
+                        없음
+                    <% } %>
+                </div>
+                <div class="financial-desc">
+                    <% if (stock.financials.hasRecentCapitalIncrease) { %>
+                        <%= stock.financials.capitalIncreaseDate %>
+                    <% } else { %>
+                        최근 1년 내 계획 없음
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- 배당 -->
+            <div class="financial-item">
+                <div class="financial-header">
+                    <span class="financial-label">배당수익률</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.dividendYield, 'dividendYield') %>"></div>
+                </div>
+                <div class="financial-value"><%= stock.financials.dividendYield.toFixed(2) %>%</div>
+                <div class="financial-desc">
+                    배당금: ₩<%= stock.financials.dividend.toLocaleString() %>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 추가 정보 섹션 -->
+    <div class="additional-info">
+        <div class="info-tabs">
+            <button class="tab-btn active" data-tab="overview">개요</button>
+            <button class="tab-btn" data-tab="financials">재무제표</button>
+            <button class="tab-btn" data-tab="news">뉴스</button>
+        </div>
+        
+        <div class="tab-content">
+            <div id="overview" class="tab-pane active">
+                <h3>기업 개요</h3>
+                <p><%= stock.description || '기업 정보를 불러오는 중입니다...' %></p>
+            </div>
+            
+            <div id="financials" class="tab-pane">
+                <h3>재무제표 상세</h3>
+                <div class="financial-details">
+                    <div class="financial-row">
+                        <span>총 자산:</span>
+                        <span>₩<%= stock.financials.totalAssets.toLocaleString() %>억</span>
+                    </div>
+                    <div class="financial-row">
+                        <span>총 부채:</span>
+                        <span>₩<%= stock.financials.totalLiabilities.toLocaleString() %>억</span>
+                    </div>
+                    <div class="financial-row">
+                        <span>자기자본:</span>
+                        <span>₩<%= stock.financials.totalEquity.toLocaleString() %>억</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="news" class="tab-pane">
+                <h3>관련 뉴스</h3>
+                <div class="news-list">
+                    <% if (stock.news && stock.news.length > 0) { %>
+                        <% stock.news.forEach(newsItem => { %>
+                            <div class="news-item">
+                                <h4><%= newsItem.title %></h4>
+                                <p><%= newsItem.summary %></p>
+                                <small><%= newsItem.date %></small>
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <p>관련 뉴스를 불러오는 중입니다...</p>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 서버에서 전달받은 차트 데이터를 JavaScript 변수로 설정
+    window.stockChartData = {
+        labels: <%- JSON.stringify(stock.chartData.map(item => item.date)) %>,
+        prices: <%- JSON.stringify(stock.chartData.map(item => item.price)) %>
+    };
+    window.stockCurrency = '<%= stock.currency %>';
+
+    // 내 종목 추가/제거 AJAX
+    function toggleFavoriteStock(add) {
+        const btn = document.getElementById('favoriteBtn');
+        btn.disabled = true;
+        fetch('/my-stocks', {
+            method: add ? 'POST' : 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                stock_code: '<%= stock.code %>',
+                stock_name: '<%= stock.name %>',
+                stock_market: '<%= stock.market %>'
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.message || '오류가 발생했습니다.');
+                btn.disabled = false;
+            }
+        })
+        .catch(() => {
+            alert('서버 통신 오류');
+            btn.disabled = false;
+        });
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/js/detail.js"></script>

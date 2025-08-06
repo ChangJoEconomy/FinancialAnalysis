@@ -1,0 +1,596 @@
+/* 상단 곡선 배경 */
+.settings-bg-top {
+  width: 100%;
+  height: 110px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%);
+  border-bottom-left-radius: 60px 40px;
+  border-bottom-right-radius: 60px 40px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+}
+
+/* 전체 레이아웃 */
+.settings-container {
+  display: flex;
+  max-width: 900px;
+  margin: 120px auto 40px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* 좌측 탭 */
+.settings-sidebar {
+  width: 180px;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #eee;
+  padding: 32px 0;
+}
+.settings-tab {
+  background: none;
+  border: none;
+  padding: 18px 0;
+  font-size: 1.1rem;
+  color: #555;
+  cursor: pointer;
+  font-weight: 500;
+  border-left: 4px solid transparent;
+  transition: all 0.2s;
+}
+.settings-tab.active {
+  color: #222;
+  background: #fff;
+  border-left: 4px solid #1976d2;
+  font-weight: 700;
+}
+
+/* 우측 내용 */
+.settings-content {
+  flex: 1;
+  padding: 40px 48px;
+  background: #fff;
+}
+.settings-pane {
+  display: none;
+}
+.settings-pane.active {
+  display: block;
+}
+.settings-pane h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 28px;
+  color: #222;
+}
+
+/* 비밀번호 폼 */
+.password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 400px;
+}
+.password-form label {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 4px;
+}
+.password-form input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #f8f9fa;
+}
+.change-btn {
+  margin-top: 16px;
+  padding: 12px 0;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.change-btn:hover {
+  background: #1453a0;
+}
+
+/* 프리셋 테이블 */
+.preset-form {
+  margin-top: 10px;
+}
+.preset-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.preset-table th, .preset-table td {
+  padding: 12px 8px;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+}
+.preset-table th {
+  background: #e3e8ef;
+  color: #222;
+  font-weight: 600;
+}
+.preset-table tr:last-child td {
+  border-bottom: none;
+}
+.preset-table input[type="number"] {
+  width: 70px;
+  padding: 7px 6px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fff;
+  font-size: 1rem;
+  text-align: right;
+}
+.preset-table td.warning {
+  background: #ffe5e5;
+}
+.preset-table td.danger {
+  background: #fff2e0;
+}
+.preset-table td.caution {
+  background: #fffbe0;
+}
+.preset-table td.safe {
+  background: #e6fae6;
+}
+
+/* 프리셋 관련 추가 스타일 */
+.preset-hint {
+  font-size: 11px;
+  color: #888;
+  margin-left: 0;
+  margin-right: 0;
+  vertical-align: middle;
+}
+
+.preset-safe-value {
+  font-size: 15px;
+  color: #222;
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.preset-input {
+  width: 70px;
+  margin-right: 4px;
+}
+
+.preset-btn {
+  padding: 12px 0;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+.preset-btn:hover {
+  background: #1453a0;
+}
+
+thead .preset-hint {
+  display: none;
+}
+
+/* 에러 메시지 스타일 추가 */
+.error-message {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.error-message i {
+  color: #e0a800;
+  font-size: 1.2em;
+}
+
+/* 프리셋 안내문 스타일 추가 */
+.preset-notice ul {
+  margin: 0 0 16px 0;
+  padding-left: 18px;
+}
+.preset-notice li {
+  color: #888;
+  font-size: 0.98rem;
+  margin-bottom: 2px;
+  list-style: none;
+  position: relative;
+}
+.preset-notice li:before {
+  content: '-';
+  position: absolute;
+  left: -14px;
+  color: #bbb;
+}
+
+@media (max-width: 700px) {
+  .settings-container {
+    flex-direction: column;
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .settings-sidebar {
+    width: 100%;
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid #eee;
+    padding: 0;
+    justify-content: center;
+  }
+  .settings-tab {
+    flex: 1;
+    padding: 16px 0;
+    border-left: none;
+    border-bottom: 4px solid transparent;
+  }
+  .settings-tab.active {
+    border-bottom: 4px solid #1976d2;
+    border-left: none;
+  }
+  .settings-content {
+    padding: 24px 10px;
+  }
+}
+
+/* 프리셋 목록 섹션 스타일 */
+.preset-list-section {
+  margin-bottom: 20px;
+}
+
+.preset-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f2f5;
+}
+
+.preset-list-header h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.preset-add-btn {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preset-add-btn:hover {
+  background: #1453a0;
+}
+
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preset-item {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.preset-item:hover {
+  background: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.preset-info h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 4px 0;
+}
+
+.preset-info p {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+}
+
+.preset-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.preset-edit-btn, .preset-delete-btn {
+  background: none;
+  border: 1px solid;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preset-edit-btn {
+  color: #28a745;
+  border-color: #28a745;
+}
+
+.preset-edit-btn:hover {
+  background: #28a745;
+  color: white;
+}
+
+.preset-delete-btn {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+.preset-delete-btn:hover {
+  background: #dc3545;
+  color: white;
+}
+
+.preset-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.preset-empty p {
+  margin: 8px 0;
+  font-size: 1rem;
+}
+
+/* 프리셋 폼 섹션 스타일 */
+.preset-form-section {
+  margin-top: 20px;
+}
+
+.preset-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f2f5;
+}
+
+.preset-form-header h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.preset-cancel-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preset-cancel-btn:hover {
+  background: #5a6268;
+}
+
+.preset-name-input {
+  margin-bottom: 20px;
+}
+
+.preset-name-input label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.preset-name-input input {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #fff;
+}
+
+.preset-name-input input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+.preset-description-input {
+  margin-bottom: 20px;
+}
+
+.preset-description-input label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.preset-description-input textarea {
+  width: 100%;
+  max-width: 500px;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #fff;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.preset-description-input textarea:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+/* 모바일 반응형 */
+@media (max-width: 700px) {
+  .preset-list-header, .preset-form-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .preset-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .preset-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .default-preset-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .default-preset-select {
+    width: 100%;
+    min-width: auto;
+  }
+}
+
+/* 기본 프리셋 설정 섹션 */
+.default-preset-section {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.default-preset-section label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.default-preset-select {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #fff;
+}
+
+.default-preset-select:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+.default-preset-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.default-preset-btn:hover {
+  background: #218838;
+}
+
+.default-preset-btn i {
+  margin-right: 6px;
+}
+
+/* 기본 프리셋 배지 */
+.default-badge {
+  background: #28a745;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+}
+
+/* 삭제 불가능한 버튼 스타일 */
+.preset-delete-btn[disabled] {
+  background: #ccc !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.preset-delete-btn[disabled]:hover {
+  background: #ccc !important;
+  transform: none !important;
+}

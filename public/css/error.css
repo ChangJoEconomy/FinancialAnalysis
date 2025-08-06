@@ -1,0 +1,152 @@
+/* 에러 페이지 스타일 */
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    text-align: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.error-icon {
+    font-size: 6rem;
+    margin-bottom: 2rem;
+    opacity: 0.8;
+}
+
+.error-title {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.error-message {
+    font-size: 1.3rem;
+    margin-bottom: 2rem;
+    max-width: 600px;
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+.error-actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-primary:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+    border: 2px solid transparent;
+}
+
+.btn-secondary:hover {
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.error-details {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    max-width: 500px;
+    word-break: break-word;
+}
+
+.error-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.error-details pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+    .error-title {
+        font-size: 2rem;
+    }
+    
+    .error-message {
+        font-size: 1.1rem;
+    }
+    
+    .error-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn {
+        width: 200px;
+        justify-content: center;
+    }
+    
+    .error-icon {
+        font-size: 4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .error-container {
+        padding: 15px;
+    }
+    
+    .error-title {
+        font-size: 1.8rem;
+    }
+    
+    .error-message {
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .error-icon {
+        font-size: 3.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .btn {
+        width: 180px;
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+}
