@@ -131,13 +131,15 @@ async function getRecentNetIncomeGrowth(corpCode) {
     results.prevNetIncome = await getIncomeDataForYear(years[1]);
 
     let growthRate = null;
-    if (results.recentNetIncome !== null && results.prevNetIncome !== null) {
-        // 분모가 0이 아니거나, 양수에서 음수로, 음수에서 양수로 전환되는 경우를 고려한 성장률 계산
-        if (results.prevNetIncome !== 0) {
-            growthRate = ((results.recentNetIncome - results.prevNetIncome) / Math.abs(results.prevNetIncome)) * 100;
-        } else {
-            // 전년도 당기순이익이 0인 경우 (성장률 계산 불가능)
-            growthRate = Infinity; // 또는 null 처리
+    if (results.recentNetIncome !== null && results.prevNetIncome !== null || results.prevNetIncome === 0) {
+        if(results.prevNetIncome > 0) { // 양수 -> {양수, 음수} 의 경우 일반적인 방식으로 성장률 계산
+            growthRate = ((results.recentNetIncome - results.prevNetIncome) / results.prevNetIncome ) * 100;
+        }
+        else if(results.recentNetIncome > 0) { // 흑자 전환
+            growthRate = Infinity; // 흑자 전환은 성장률을 무한대로 간주
+        }
+        else { // 이게 기업..?
+            growthRate = -Infinity; // 적자 전환은 성장률을 음의 무한대로 간주
         }
     }
 
@@ -148,6 +150,41 @@ async function getRecentNetIncomeGrowth(corpCode) {
         prevNetIncome: results.prevNetIncome,
         growthRate: growthRate === Infinity ? 'N/A (분모 0)' : (growthRate ? growthRate.toFixed(2) : null)
     };
+}
+
+// 기본 가격정보와 차트 데이터 가져오는 함수
+async function fetchBasicAndChartData(code, market) {
+    // 야후 파이낸스 심볼 변환
+    let symbol = code;
+    if (market === 'KOSPI') {
+        symbol = `${code}.KS`;
+    } else if (market === 'KOSDAQ') {
+        symbol = `${code}.KQ`;
+    }
+
+    // Promise.all로 현재가와 차트 데이터 동시 요청
+    const [quote, historical] = await Promise.all([
+        yahooFinance.quote(symbol),
+        yahooFinance.historical(symbol, {
+            period1: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            period2: new Date(),
+            interval: '1d'
+        })
+    ]);
+
+    // 금일 가격정보
+    const currentPrice = quote.regularMarketPrice;
+    const changeAmount = quote.regularMarketChange;
+    const changeRate = quote.regularMarketChangePercent;
+    const marketCap = quote.marketCap;
+
+    // 차트 데이터 변환
+    const chartData = historical.map(item => ({
+        date: item.date.toISOString().split('T')[0],
+        price: item.close
+    }));
+
+    return { currentPrice, changeAmount, changeRate, marketCap, chartData };
 }
 
 // @desc Get Stock Details Page
@@ -163,71 +200,45 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
 
     try {
         // 우선 json에서 기본 정보를 가져옴
-        const basic_info = getStockInfoByTicker(code); // 삼성전자 ticker 예시
-        if (basic_info) {
-            companyName = basic_info.name;
-            corp_code = basic_info.corp_code;
-            market = basic_info.market;
-        }
-        else {
+        const name_info = getStockInfoByTicker(code);
+        if (!name_info) {
             return res.status(400).render('error', {
                 title: '오류',
                 message: '주식 정보를 찾을 수 없습니다. 잠시후 다시 시도해주세요.'
             });
         }
-        console.log("회사 코드:", corp_code);
+        const companyName = name_info.name;
+        const corp_code = name_info.corp_code;
+        const market = name_info.market;
 
-        // 야후 파이낸스 심볼 변환
-        let symbol = code;
-        if (market === 'KOSPI') {
-            symbol = `${code}.KS`;
-        }
-        else if (market === 'KOSDAQ') {
-            symbol = `${code}.KQ`;
-        }
-
-        // Promise.all을 사용하여 실제 필요한 데이터만 가져오기 (현재가, 차트 데이터)
-        const [quote, historical] = await Promise.all([
-            yahooFinance.quote(symbol),
-            yahooFinance.historical(symbol, {
-                period1: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-                period2: new Date(),
-                interval: '1d'
-            })
-        ]);
-
-        // 금일 가격정보 가져오기
-        const currentPrice = quote.regularMarketPrice;
-        const changeAmount = quote.regularMarketChange;
-        const changeRate = quote.regularMarketChangePercent;
-        const marketCap = quote.marketCap;
-        
-        // 차트 데이터 변환
-        const chartData = historical.map(item => ({
-            date: item.date.toISOString().split('T')[0],
-            price: item.close
-        }));
+        // 기본정보와 차트 데이터
+        const { currentPrice, changeAmount, changeRate, marketCap, chartData } = await fetchBasicAndChartData(code, market);
 
         // 당기 순이익 성장률 계산
-        let netIncomeGrowth = null;
         const incomeData = await getRecentNetIncomeGrowth(corp_code);
-        
+
+        // PER 계산
+        let per = null;
+        if (marketCap && incomeData && incomeData.recentNetIncome) {
+            per = (marketCap / (incomeData.recentNetIncome));
+        }
+
         // 더미 재무 데이터 생성
         const dummyFinancials = {
-            marketCap: marketCap,  // 시가총액 (원 단위)
-            recentNetIncome: incomeData ? incomeData.recentNetIncome : null,  // 최근 당기순이익
-            recentNetIncomeYear: incomeData ? incomeData.recentYear : null,  // 최근 당기순이익 연도
-            netIncomeGrowth: incomeData ? incomeData.growthRate : null,  // 당기순이익 성장률
-            per: 12.5,  // PER 12.5배
-            debtRatio: 28.3,  // 부채비율 28.3%
-            quickRatio: 1.85,  // 당좌비율 1.85배
-            dividendYield: 2.8,  // 시가배당률 2.8%
-            dividend: 1500,  // 배당금 1500원
-            totalAssets: 3500,  // 3500억원 (재무제표용)
-            totalLiabilities: 1200,  // 1200억원 (재무제표용)
-            totalEquity: 2300   // 2300억원 (재무제표용)
+            marketCap: marketCap,
+            recentNetIncome: incomeData ? incomeData.recentNetIncome : null,
+            recentNetIncomeYear: incomeData ? incomeData.recentYear : null,
+            netIncomeGrowth: incomeData ? incomeData.growthRate : null,
+            per: per,
+            debtRatio: 28.3,
+            quickRatio: 1.85,
+            dividendYield: 2.8,
+            dividend: 1500,
+            totalAssets: 3500,
+            totalLiabilities: 1200,
+            totalEquity: 2300
         };
-        
+
         // 더미 뉴스 데이터
         const dummyNews = [
             {
@@ -255,10 +266,10 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             currentPrice: currentPrice,
             changeAmount: changeAmount,
             changeRate: changeRate,
-            description: "여기에 기업 개요 정보",   // 현재 더미 데이터
+            description: "여기에 기업 개요 정보",
             chartData: chartData,
-            financials: dummyFinancials,          // 더미 재무 데이터
-            news: dummyNews                       // 더미 뉴스 데이터
+            financials: dummyFinancials,
+            news: dummyNews
         };
 
         // 신호등 색상을 템플릿에서 사용할 수 있도록 res.locals에 추가

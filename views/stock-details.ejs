@@ -65,9 +65,6 @@
                     <div class="signal-light <%= getSignalColor(stock.financials.marketCap, 'marketCap') %>"></div>
                 </div>
                 <div class="financial-value">
-                    <%= stock.financials.marketCap.toLocaleString() %>원
-                </div>
-                <div class="financial-desc">  <!-- 시가총액 한글 unit으로 표시 -->
                     <% 
                         const marketCap = stock.financials.marketCap;
                         const trillion = 1_000_000_000_000;
@@ -85,6 +82,9 @@
                     %>
                     <%= displayCap %>
                 </div>
+                <div class="financial-desc">
+                    <%= stock.financials.marketCap.toLocaleString() %>원
+                </div>
             </div>
 
             <!-- 당기순이익 성장률 -->
@@ -94,9 +94,20 @@
                     <div class="signal-light <%= getSignalColor(stock.financials.netIncomeGrowth, 'netIncomeGrowth') %>"></div>
                 </div>
                 <div class="financial-value">
-                    <%= (stock.financials.netIncomeGrowth !== null && stock.financials.netIncomeGrowth !== undefined)
-                        ? (stock.financials.netIncomeGrowth >= 0 ? '+' : '') + Number(stock.financials.netIncomeGrowth).toFixed(1) + '%'
-                        : '데이터 없음' %>
+                    <% 
+                        const netIncomeGrowth = stock.financials.netIncomeGrowth;
+                        let netIncomeGrowthDisplay;
+                        if (netIncomeGrowth === null || netIncomeGrowth === undefined) {
+                            netIncomeGrowthDisplay = '데이터 없음';
+                        } else if (Number(netIncomeGrowth) === -Infinity) {
+                            netIncomeGrowthDisplay = '적자 지속';
+                        } else if (!isFinite(netIncomeGrowth)) {
+                            netIncomeGrowthDisplay = '흑자 전환';
+                        } else {
+                            netIncomeGrowthDisplay = (netIncomeGrowth >= 0 ? '+' : '') + Number(netIncomeGrowth).toFixed(1) + '%';
+                        }
+                    %>
+                    <%= netIncomeGrowthDisplay %>
                 </div>
                 <div class="financial-desc">
                     <% if (stock.financials.recentNetIncome !== null && stock.financials.recentNetIncome !== undefined && stock.financials.recentNetIncomeYear) { %>
@@ -131,7 +142,11 @@
                     <span class="financial-label">PER</span>
                     <div class="signal-light <%= getSignalColor(stock.financials.per, 'per') %>"></div>
                 </div>
-                <div class="financial-value"><%= stock.financials.per.toFixed(1) %>배</div>
+                <div class="financial-value">
+                  <%= (stock.financials.per !== null && stock.financials.per !== undefined && !isNaN(Number(stock.financials.per)))
+                      ? Number(stock.financials.per).toFixed(1)
+                      : '데이터 없음' %>
+                </div>
                 <div class="financial-desc">주가수익비율</div>
             </div>
 
