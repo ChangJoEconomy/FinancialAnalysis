@@ -78,9 +78,9 @@ const handleRegister = asyncHandler(async (req, res) => {
             quick_warning: 50,
             quick_danger: 75,
             quick_caution: 100,
-            dividend_warning: 5,
-            dividend_danger: 10,
-            dividend_caution: 15
+            dividend_warning: 1,
+            dividend_danger: 2,
+            dividend_caution: 4
         },
         {
             user_id: user_id,

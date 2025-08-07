@@ -1,46 +1,21 @@
 const asyncHandler = require('express-async-handler');
 const yahooFinance = require('yahoo-finance2').default;
 const UserStock = require('../models/UserStock');
+const Preset = require('../models/Preset');
+const DefaultPreset = require('../models/DefaultPreset');
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const DART_API_KEY = process.env.DART_API_KEY;
-
 const stocks = JSON.parse(fs.readFileSync(path.join(__dirname, '../public/data/all_stocks.json'), 'utf-8'));
-
-// 신호등 색상 결정 함수
-const getSignalColor = (value, type = 'default') => {
-    if (type === 'netIncome' || type === 'roe' || type === 'dividendYield') {
-        if (value >= 15) return 'green';
-        if (value >= 5) return 'orange';
-        return 'red';
-    }
-    if (type === 'per') {
-        if (value <= 10) return 'green';
-        if (value <= 20) return 'orange';
-        return 'red';
-    }
-    if (type === 'marketCap') {
-        if (value >= 10) return 'green';
-        if (value >= 1) return 'orange';
-        return 'red';
-    }
-    if (type === 'capitalIncrease') {
-        return value ? 'red' : 'green';
-    }
-    // 기본값
-    if (value > 0) return 'green';
-    if (value === 0) return 'orange';
-    return 'red';
-};
 
 // json에서 기본 정보 가져오는 함수
 function getStockInfoByTicker(ticker) {
     return stocks.find(stock => stock.ticker === ticker);
 }
 
-// 최근 당기순이익과 성장률을 가져오는 함수
+// 최근 당기순이익과 성장률 조회
 async function getRecentNetIncomeGrowth(corpCode) {
     // DART_API_KEY가 전역 변수로 설정되어 있다고 가정합니다.
     if (!DART_API_KEY) {
@@ -160,7 +135,7 @@ async function getRecentNetIncomeGrowth(corpCode) {
     };
 }
 
-// 기본 가격정보와 차트 데이터 가져오는 함수
+// 기본 가격정보와 차트 데이터 조회
 async function fetchBasicAndChartData(code, market) {
     // 야후 파이낸스 심볼 변환
     let symbol = code;
@@ -195,7 +170,7 @@ async function fetchBasicAndChartData(code, market) {
     return { currentPrice, changeAmount, changeRate, marketCap, chartData };
 }
 
-// 부채비율과 총부채만 반환하는 간소화 함수
+// 부채비율과 총부채만 조회
 async function getDebtInfo(corpCode) {
     const API_URL = 'https://opendart.fss.or.kr/api/fnlttSinglAcnt.json';
     const REPORT_CODE = '11011'; // 사업보고서
@@ -260,6 +235,66 @@ async function getDebtInfo(corpCode) {
     };
 }
 
+// 배당금 정보 조회
+async function getCommonStockDividend(corpCode) {
+  const currentYear = new Date().getFullYear();
+  const yearsToTry = [currentYear - 1, currentYear - 2, currentYear - 3]; // 2024, 2023, 2022
+  
+  for (const year of yearsToTry) {
+    try {
+      const url = `https://opendart.fss.or.kr/api/alotMatter.json`;
+      const response = await axios.get(url, {
+        params: {
+          crtfc_key: DART_API_KEY,
+          corp_code: corpCode,
+          bsns_year: year.toString(),
+          reprt_code: "11011", // 사업보고서
+        },
+      });
+
+      const data = response.data;
+
+      if (data.status !== "000") {
+        console.log(`${year}년: ${data.message} 배당금 조회 실패`);
+        continue; // 다음 연도 시도
+      }
+
+      // 보통주 현금배당금 정보 찾기
+      const commonDividendItem = data.list.find(item => 
+        item.se === "주당 현금배당금(원)" && 
+        item.stock_knd === "보통주" &&
+        item.thstrm && item.thstrm !== "-"
+      );
+
+      // 보통주 현금배당수익률 정보 찾기
+      const dividendYieldItem = data.list.find(item => 
+        item.se === "현금배당수익률(%)" && 
+        item.stock_knd === "보통주"
+      );
+
+      if (!commonDividendItem) {
+        console.log(`${year}년: 보통주 배당금 정보 없음`);
+        continue; // 다음 연도 시도
+      }
+
+      // 당기 데이터만 반환
+      const result = {
+        year: year,
+        dividendPerShare: commonDividendItem.thstrm, // 주당 현금배당금
+        dividendYield: dividendYieldItem ? dividendYieldItem.thstrm : null, // 현금배당수익률
+      };
+
+      return result;
+
+    } catch (error) {
+      continue; // 다음 연도 시도
+    }
+  }
+
+  console.log("모든 연도에서 배당 정보를 찾을 수 없습니다.");
+  return null;
+}
+
 // @desc Get Stock Details Page
 // @route GET /stock-details
 const getStockDetailsPage = asyncHandler(async (req, res) => {
@@ -305,11 +340,10 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
         // 당좌비율 계산
 
         // 배당수익률 계산
-        
-        
+        const dividendInfo = await getCommonStockDividend(corp_code);
 
-        // 더미 재무 데이터 생성
-        const dummyFinancials = {
+        // 재무 데이터 생성
+        const Financials = {
             // 시가총액
             marketCap: marketCap,
             // 당기 순이익
@@ -323,12 +357,15 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             debtYear: debtYear,
             totalDebt: totalDebt,
             // 당좌비율
-            quickRatio: 1.85,
-            dividendYield: 2.8,
-            dividend: 1500,
+            quickRatio: null, // TODO: 실제 계산 로직 추가
+            // 배당금 정보
+            dividendYield: dividendInfo ? parseFloat(dividendInfo.dividendYield) : null,
+            dividend: dividendInfo ? dividendInfo.dividendPerShare : null,
+            dividendYear: dividendInfo ? dividendInfo.year : null,
+            // 기타정보 (나중에 뺄듯)
             totalAssets: 3500,
             totalLiabilities: 1200,
-            totalEquity: 2300
+            totalEquity: 2300,
         };
 
         // 더미 뉴스 데이터
@@ -358,36 +395,9 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             currentPrice: currentPrice,
             changeAmount: changeAmount,
             changeRate: changeRate,
-            description: "여기에 기업 개요 정보",
             chartData: chartData,
-            financials: dummyFinancials,
+            financials: Financials,
             news: dummyNews
-        };
-
-        // 신호등 색상을 템플릿에서 사용할 수 있도록 res.locals에 추가
-        res.locals.getSignalColor = (value, metric) => {
-            switch (metric) {
-                case 'marketCap':
-                    return getSignalColor(value, 'marketCap');
-                case 'netIncomeGrowth':
-                    return getSignalColor(value, 'netIncome');
-                case 'per':
-                    return getSignalColor(value, 'per');
-                case 'debtRatio':
-                    // 부채비율: 낮을수록 좋음 (30% 이하 좋음, 50% 이하 보통, 그 이상 나쁨)
-                    if (value <= 30) return 'green';
-                    if (value <= 50) return 'orange';
-                    return 'red';
-                case 'quickRatio':
-                    // 당좌비율: 1.0 이상이 좋음
-                    if (value >= 1.5) return 'green';
-                    if (value >= 1.0) return 'orange';
-                    return 'red';
-                case 'dividendYield':
-                    return getSignalColor(value, 'dividendYield');
-                default:
-                    return getSignalColor(value);
-            }
         };
 
         // 내 종목 여부 확인
@@ -399,11 +409,28 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             });
         }
 
+        // 사용자의 모든 프리셋과 기본 프리셋 정보 가져오기
+        let presets = [];
+        let defaultPresetName = null;
+        
+        if (req.user) {
+            // 사용자의 모든 프리셋 조회
+            presets = await Preset.find({ user_id: req.user.user_id });
+            
+            // 기본 프리셋 조회
+            const defaultPreset = await DefaultPreset.findOne({ user_id: req.user.user_id });
+            if (defaultPreset) {
+                defaultPresetName = defaultPreset.preset_name;
+            }
+        }
+
         res.render('stock-details', {
             title: `${stock.name} 정보`,
             stock: stock,
             user: req.user,
-            isFavorite
+            isFavorite,
+            presets: presets,
+            defaultPresetName: defaultPresetName
         });
 
     } catch (error) {

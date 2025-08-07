@@ -55,14 +55,37 @@
 
     <!-- 재무 정보 섹션 -->
     <div class="financial-section">
-        <h2>재무 정보</h2>
+        <div class="financial-header-section">
+            <h2>재무 정보</h2>
+            <% if (user && presets && presets.length > 0) { %>
+                <div class="preset-selector">
+                    <label for="presetSelect">분석 프리셋:</label>
+                    <select id="presetSelect" onchange="changePreset()">
+                        <% 
+                            let sortedPresets = presets.slice();
+                            if (defaultPresetName) {
+                                sortedPresets = [
+                                    ...presets.filter(p => p.preset_name === defaultPresetName),
+                                    ...presets.filter(p => p.preset_name !== defaultPresetName)
+                                ];
+                            }
+                            sortedPresets.forEach(preset => { %>
+                            <option value="<%= preset.preset_name %>" 
+                                    <%= preset.preset_name === defaultPresetName ? 'selected' : '' %>>
+                                <%= preset.preset_name %>
+                            </option>
+                        <% }) %>
+                    </select>
+                </div>
+            <% } %>
+        </div>
         <div class="financial-grid">
 
             <!-- 시가총액 -->
             <div class="financial-item">
                 <div class="financial-header">
                     <span class="financial-label">시가총액</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.marketCap, 'marketCap') %>"></div>
+                    <div class="signal-light" data-metric="marketCap" data-value="<%= stock.financials.marketCap %>"></div>
                 </div>
                 <div class="financial-value">
                     <% 
@@ -91,7 +114,7 @@
             <div class="financial-item">
                 <div class="financial-header">
                     <span class="financial-label">당기순이익 성장률</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.netIncomeGrowth, 'netIncomeGrowth') %>"></div>
+                    <div class="signal-light" data-metric="netIncomeGrowth" data-value="<%= stock.financials.netIncomeGrowth %>"></div>
                 </div>
                 <div class="financial-value">
                     <% 
@@ -140,7 +163,7 @@
             <div class="financial-item">
                 <div class="financial-header">
                     <span class="financial-label">PER</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.per, 'per') %>"></div>
+                    <div class="signal-light" data-metric="per" data-value="<%= stock.financials.per %>"></div>
                 </div>
                 <div class="financial-value">
                   <%= (stock.financials.per !== null && stock.financials.per !== undefined && !isNaN(Number(stock.financials.per)))
@@ -154,7 +177,7 @@
             <div class="financial-item">
                 <div class="financial-header">
                     <span class="financial-label">부채비율</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.debtRatio, 'debtRatio') %>"></div>
+                    <div class="signal-light" data-metric="debtRatio" data-value="<%= stock.financials.debtRatio %>"></div>
                 </div>
                 <div class="financial-value">
                   <% if (stock.financials.debtRatio === null || stock.financials.debtRatio === undefined || isNaN(Number(stock.financials.debtRatio))) { %>
@@ -192,22 +215,38 @@
             <div class="financial-item">
                 <div class="financial-header">
                     <span class="financial-label">당좌비율</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.quickRatio, 'quickRatio') %>"></div>
+                    <div class="signal-light" data-metric="quickRatio" data-value="<%= stock.financials.quickRatio %>"></div>
                 </div>
-                <div class="financial-value"><%= stock.financials.quickRatio.toFixed(2) %>배</div>
-                <div class="financial-desc">유동성 지표</div>
+            <div class="financial-value">
+                <% if (stock.financials.quickRatio === null || stock.financials.quickRatio === undefined || isNaN(Number(stock.financials.quickRatio))) { %>
+                    데이터 없음
+                <% } else { %>
+                    <%= Number(stock.financials.quickRatio).toFixed(2) %>배
+                <% } %>
+            </div>
+            <div class="financial-desc">유동성 지표</div>
             </div>
 
             <!-- 시가배당률 -->
             <div class="financial-item">
                 <div class="financial-header">
                     <span class="financial-label">시가배당률</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.dividendYield, 'dividendYield') %>"></div>
+                    <div class="signal-light" data-metric="dividendYield" data-value="<%= stock.financials.dividendYield %>"></div>
                 </div>
-                <div class="financial-value"><%= stock.financials.dividendYield.toFixed(2) %>%</div>
-                <div class="financial-desc">
-                    배당금: ₩<%= stock.financials.dividend.toLocaleString() %>
-                </div>
+            <div class="financial-value">
+                <% if (stock.financials.dividendYield === null || stock.financials.dividendYield === undefined || isNaN(Number(stock.financials.dividendYield))) { %>
+                    데이터 없음
+                <% } else { %>
+                    <%= Number(stock.financials.dividendYield).toFixed(2) %>%
+                <% } %>
+            </div>
+            <div class="financial-desc">
+                <% if (stock.financials.dividendYield === null || stock.financials.dividendYield === undefined || isNaN(Number(stock.financials.dividendYield))) { %>
+                    최근 3년이내 배당기록 없음
+                <% } else { %>
+                    <%= stock.financials.dividendYear %> 배당금: ₩<%= stock.financials.dividend.toLocaleString() %>
+                <% } %>
+            </div>
             </div>
 
         </div>
@@ -272,6 +311,107 @@
         prices: <%- JSON.stringify(stock.chartData.map(item => item.price)) %>
     };
     window.stockCurrency = '<%= stock.currency %>';
+
+    // 프리셋 데이터를 JavaScript 변수로 설정
+    <% if (user && presets) { %>
+        window.presets = <%- JSON.stringify(presets) %>;
+        window.defaultPresetName = '<%= defaultPresetName %>';
+    <% } else { %>
+        window.presets = [];
+        window.defaultPresetName = null;
+    <% } %>
+
+    // 신호등 색상 결정 함수
+    function getSignalColor(value, metric, preset) {
+        if (metric === 'dividendYield') { // 시가배당률만 예외적으로 데이터없음(안주면) red 처리
+            if (value === null || value === undefined || isNaN(parseFloat(value))) {
+                return 'red';
+            }
+        } else { // 데이터 없음
+            if (!preset || value === null || value === undefined || isNaN(parseFloat(value))) {
+                return 'gray';
+            }
+        }
+
+        const numValue = parseFloat(value);
+
+        switch (metric) {
+            case 'marketCap':
+                if (numValue > preset.marketCap_warning * 100000000) return 'red';
+                if (numValue > preset.marketCap_danger * 100000000) return 'orange';
+                if (numValue > preset.marketCap_caution * 100000000) return 'yellow';
+                return 'green';
+            
+            case 'netIncomeGrowth':
+                if (numValue < preset.netIncome_warning) return 'red';
+                if (numValue < preset.netIncome_danger) return 'orange';
+                if (numValue < preset.netIncome_caution) return 'yellow';
+                return 'green';
+            
+            case 'per':
+                if (numValue < 0 || numValue > preset.per_warning) return 'red'; // PER은 음수는 자동 경고
+                if (numValue > preset.per_danger) return 'orange';
+                if (numValue > preset.per_caution) return 'yellow';
+                return 'green';
+            
+            case 'debtRatio':
+                if (numValue > preset.debt_warning) return 'red';
+                if (numValue > preset.debt_danger) return 'orange';
+                if (numValue > preset.debt_caution) return 'yellow';
+                return 'green';
+            
+            case 'quickRatio':
+                if (numValue < preset.quick_warning) return 'red';
+                if (numValue < preset.quick_danger) return 'orange';
+                if (numValue < preset.quick_caution) return 'yellow';
+                return 'green';
+            
+            case 'dividendYield':
+                if (numValue < preset.dividend_warning) return 'red';
+                if (numValue < preset.dividend_danger) return 'orange';
+                if (numValue < preset.dividend_caution) return 'yellow';
+                return 'green';
+            
+            default:
+                return 'gray';
+        }
+    }
+
+    // 신호등 업데이트 함수
+    function updateSignalLights(presetName) {
+        if (!window.presets || window.presets.length === 0) return;
+        
+        const preset = window.presets.find(p => p.preset_name === presetName);
+        if (!preset) return;
+
+        // 모든 신호등 요소를 찾아서 업데이트
+        const signalLights = document.querySelectorAll('.signal-light[data-metric]');
+        signalLights.forEach(light => {
+            const metric = light.dataset.metric;
+            const value = light.dataset.value;
+            
+            // 기존 색상 클래스 제거
+            light.classList.remove('green', 'orange', 'red', 'gray', 'yellow');
+            
+            // 새로운 색상 클래스 추가
+            const color = getSignalColor(value, metric, preset);
+            light.classList.add(color);
+        });
+    }
+
+    // 프리셋 변경 함수
+    function changePreset() {
+        const select = document.getElementById('presetSelect');
+        const selectedPreset = select.value;
+        updateSignalLights(selectedPreset);
+    }
+
+    // 페이지 로드 시 기본 프리셋으로 신호등 설정
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.defaultPresetName) {
+            updateSignalLights(window.defaultPresetName);
+        }
+    });
 
     // 내 종목 추가/제거 AJAX
     function toggleFavoriteStock(add) {

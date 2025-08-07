@@ -139,25 +139,6 @@ function formatPercentage(rate) {
     return (rate >= 0 ? '+' : '') + rate.toFixed(2) + '%';
 }
 
-// 신호등 애니메이션 효과
-function animateSignalLights() {
-    const signalLights = document.querySelectorAll('.signal-light');
-    
-    signalLights.forEach((light, index) => {
-        setTimeout(() => {
-            light.style.transform = 'scale(1.2)';
-            setTimeout(() => {
-                light.style.transform = 'scale(1)';
-            }, 200);
-        }, index * 100);
-    });
-}
-
-// 페이지 로드 완료 후 신호등 애니메이션 실행
-window.addEventListener('load', function() {
-    setTimeout(animateSignalLights, 500);
-});
-
 // 반응형 차트 리사이즈
 window.addEventListener('resize', function() {
     const chart = Chart.getChart('stockChart');

@@ -3,7 +3,52 @@
     max-width: 1200px;
     margin: 100px auto 20px;
     padding: 0 20px;
-    background: #fff;
+ /* 재무 정보 섹션 */
+.financial-section {
+    padding: 32px;
+    border-bottom: 1px solid #eee;
+}
+
+.financial-header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.financial-section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #222;
+    margin: 0;
+}
+
+.preset-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preset-selector label {
+    font-weight: 600;
+    color: #555;
+}
+
+.preset-selector select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.preset-selector select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}d: #fff;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
@@ -182,9 +227,19 @@
     box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
 }
 
+.signal-light.yellow {
+    background: #ffeb3b;
+    box-shadow: 0 0 10px rgba(255, 235, 59, 0.5);
+}
+
 .signal-light.red {
     background: #f44336;
     box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+}
+
+.signal-light.gray {
+    background: #999;
+    box-shadow: 0 0 10px rgba(153, 153, 153, 0.3);
 }
 
 .financial-value {
