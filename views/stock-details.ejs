@@ -156,8 +156,36 @@
                     <span class="financial-label">부채비율</span>
                     <div class="signal-light <%= getSignalColor(stock.financials.debtRatio, 'debtRatio') %>"></div>
                 </div>
-                <div class="financial-value"><%= stock.financials.debtRatio.toFixed(1) %>%</div>
-                <div class="financial-desc">총부채/자기자본</div>
+                <div class="financial-value">
+                  <% if (stock.financials.debtRatio === null || stock.financials.debtRatio === undefined || isNaN(Number(stock.financials.debtRatio))) { %>
+                    데이터 없음
+                  <% } else { %>
+                    <%= Number(stock.financials.debtRatio).toFixed(1) %>%
+                  <% } %>
+                </div>
+                <div class="financial-desc">
+                  <% if (stock.financials.totalDebt && stock.financials.debtYear) { %>
+                    <% 
+                      const year = stock.financials.debtYear;
+                      const debt = Number(stock.financials.totalDebt);
+                      const trillion = 1_000_000_000_000;
+                      const hundredMillion = 100_000_000;
+                      let displayDebt = '';
+                      if (debt >= trillion) {
+                        displayDebt = Math.floor(debt / trillion) + '조 ';
+                        const rest = Math.floor((debt % trillion) / hundredMillion);
+                        if (rest > 0) displayDebt += rest + '억';
+                      } else if (debt >= hundredMillion) {
+                        displayDebt = Math.floor(debt / hundredMillion) + '억';
+                      } else {
+                        displayDebt = debt.toLocaleString() + '원';
+                      }
+                    %>
+                    <%= year %>년 총부채 <%= displayDebt %>
+                  <% } else { %>
+                    데이터 없음
+                  <% } %>
+                </div>
             </div>
 
             <!-- 당좌비율 -->

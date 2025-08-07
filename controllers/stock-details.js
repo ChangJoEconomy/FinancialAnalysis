@@ -49,7 +49,7 @@ async function getRecentNetIncomeGrowth(corpCode) {
     }
 
     const currentYear = new Date().getFullYear();
-    const years = [currentYear - 1, currentYear - 2];
+    let years = [currentYear - 1, currentYear - 2];
     const results = {};
 
     const getIncomeDataForYear = async (year) => {
@@ -130,6 +130,14 @@ async function getRecentNetIncomeGrowth(corpCode) {
     results.recentNetIncome = await getIncomeDataForYear(years[0]);
     results.prevNetIncome = await getIncomeDataForYear(years[1]);
 
+    // 최신 연도 데이터가 없으면 한 해 더 과거로 이동
+    if (results.recentNetIncome === null) {
+        console.log(`${years[0]}년 데이터가 없어 ${currentYear - 2}년으로 재시도합니다.`);
+        years = [currentYear - 2, currentYear - 3];
+        results.recentNetIncome = await getIncomeDataForYear(years[0]);
+        results.prevNetIncome = await getIncomeDataForYear(years[1]);
+    }
+
     let growthRate = null;
     if (results.recentNetIncome !== null && results.prevNetIncome !== null || results.prevNetIncome === 0) {
         if(results.prevNetIncome > 0) { // 양수 -> {양수, 음수} 의 경우 일반적인 방식으로 성장률 계산
@@ -187,6 +195,71 @@ async function fetchBasicAndChartData(code, market) {
     return { currentPrice, changeAmount, changeRate, marketCap, chartData };
 }
 
+// 부채비율과 총부채만 반환하는 간소화 함수
+async function getDebtInfo(corpCode) {
+    const API_URL = 'https://opendart.fss.or.kr/api/fnlttSinglAcnt.json';
+    const REPORT_CODE = '11011'; // 사업보고서
+    const currentYear = new Date().getFullYear();
+
+    let data = null;
+    let balanceSheet = null;
+
+    for (let year = currentYear - 1; year >= currentYear - 3; year--) {
+        try {
+            const response = await axios.get(API_URL, {
+                params: {
+                    crtfc_key: DART_API_KEY,
+                    corp_code: corpCode,
+                    bsns_year: year.toString(),
+                    reprt_code: REPORT_CODE,
+                    fs_div: 'CFS'
+                }
+            });
+
+            const responseData = response.data;
+
+            if (responseData.status === '000' && responseData.list && responseData.list.length > 0) {
+                data = responseData;
+                targetYear = year;
+                balanceSheet = data.list.filter(item => item.sj_div === 'BS');
+                if (balanceSheet.length > 0) break;
+            }
+        } catch (err) {
+            // 무시 (작년 데이터로 다시 요청시도)
+        }
+    }
+
+    if (!data || !balanceSheet || balanceSheet.length === 0) {
+        return null;
+    }
+
+    const totalDebt = balanceSheet.find(item =>
+        item.account_nm.includes('부채총계') ||
+        item.account_nm.includes('총부채')
+    );
+    const totalEquity = balanceSheet.find(item =>
+        item.account_nm.includes('자본총계') ||
+        item.account_nm.includes('총자본') ||
+        item.account_nm.includes('자기자본')
+    );
+
+    let debtRatio = null;
+    let totalDebtAmount = null;
+
+    if (totalDebt && totalEquity) {
+        const debtAmount = Number(totalDebt.thstrm_amount.replace(/,/g, ''));
+        const equityAmount = Number(totalEquity.thstrm_amount.replace(/,/g, ''));
+        debtRatio = (debtAmount / equityAmount) * 100;
+        totalDebtAmount = debtAmount;
+    }
+
+    return {
+        year: targetYear,
+        debtRatio,
+        totalDebt: totalDebtAmount
+    };
+}
+
 // @desc Get Stock Details Page
 // @route GET /stock-details
 const getStockDetailsPage = asyncHandler(async (req, res) => {
@@ -223,14 +296,33 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             per = (marketCap / (incomeData.recentNetIncome));
         }
 
+        // 부채비율 계산
+        const debtInfo = await getDebtInfo(corp_code);
+        const debtRatio = debtInfo ? debtInfo.debtRatio : null;
+        const debtYear = debtInfo ? debtInfo.year : null;
+        const totalDebt = debtInfo ? debtInfo.totalDebt : null;
+
+        // 당좌비율 계산
+
+        // 배당수익률 계산
+        
+        
+
         // 더미 재무 데이터 생성
         const dummyFinancials = {
+            // 시가총액
             marketCap: marketCap,
+            // 당기 순이익
             recentNetIncome: incomeData ? incomeData.recentNetIncome : null,
             recentNetIncomeYear: incomeData ? incomeData.recentYear : null,
             netIncomeGrowth: incomeData ? incomeData.growthRate : null,
+            // PER
             per: per,
-            debtRatio: 28.3,
+            // 부채비율
+            debtRatio: debtRatio,
+            debtYear: debtYear,
+            totalDebt: totalDebt,
+            // 당좌비율
             quickRatio: 1.85,
             dividendYield: 2.8,
             dividend: 1500,
