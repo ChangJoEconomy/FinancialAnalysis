@@ -20,6 +20,8 @@
     "express-ejs-layouts": "^2.5.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.0",
+    "unzipper": "^0.12.3",
+    "xml2js": "^0.6.2",
     "yahoo-finance2": "^2.13.3"
   }
 }

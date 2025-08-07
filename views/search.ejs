@@ -113,6 +113,6 @@
         // 종목 상세 페이지로 이동
         const marketElement = event.currentTarget.querySelector('.market-type');
         const market = marketElement ? marketElement.textContent : '';
-        window.location.href = `/stock-details?market=${encodeURIComponent(market)}&code=${encodeURIComponent(code)}&name=${encodeURIComponent(name)}`;
+        window.location.href = `/stock-details?code=${encodeURIComponent(code)}`;
     }
 </script>

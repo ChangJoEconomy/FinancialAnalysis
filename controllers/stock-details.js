@@ -1,6 +1,10 @@
 const asyncHandler = require('express-async-handler');
 const yahooFinance = require('yahoo-finance2').default;
 const UserStock = require('../models/UserStock');
+const fs = require('fs');
+const path = require('path');
+
+const stocks = JSON.parse(fs.readFileSync(path.join(__dirname, '../public/data/all_stocks.json'), 'utf-8'));
 
 // 신호등 색상 결정 함수
 const getSignalColor = (value, type = 'default') => {
@@ -28,11 +32,16 @@ const getSignalColor = (value, type = 'default') => {
     return 'red';
 };
 
+// json에서 기본 정보 가져오는 함수
+function getStockInfoByTicker(ticker) {
+    return stocks.find(stock => stock.ticker === ticker);
+}
+
 // @desc Get Stock Details Page
 // @route GET /stock-details
 const getStockDetailsPage = asyncHandler(async (req, res) => {
-    const { market, code, name } = req.query;
-    if (!market || !code || !name) {
+    const { code } = req.query;
+    if (!code) {
         return res.status(400).render('error', {
             title: '오류',
             message: '잘못된 요청입니다. 다시 시도해주세요.'
@@ -40,6 +49,20 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
     }
 
     try {
+        // 우선 json에서 기본 정보를 가져옴
+        const basic_info = getStockInfoByTicker(code); // 삼성전자 ticker 예시
+        if (basic_info) {
+            companyName = basic_info.name;
+            corp_code = basic_info.corp_code;
+            market = basic_info.market;
+        }
+        else {
+            return res.status(400).render('error', {
+                title: '오류',
+                message: '주식 정보를 찾을 수 없습니다. 잠시후 다시 시도해주세요.'
+            });
+        }
+
         // 야후 파이낸스 심볼 변환
         let symbol = code;
         if (market === 'KOSPI') {
@@ -59,13 +82,12 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             })
         ]);
 
-        // 기본 데이터 추출 (실제 데이터)
+        // 금일 가격정보 가져오기
         const currentPrice = quote.regularMarketPrice;
         const changeAmount = quote.regularMarketChange;
         const changeRate = quote.regularMarketChangePercent;
-        const companyName = name;
         
-        // 차트 데이터 변환 (실제 데이터)
+        // 차트 데이터 변환
         const chartData = historical.map(item => ({
             date: item.date.toISOString().split('T')[0],
             price: item.close
@@ -114,7 +136,7 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
         const stock = {
             name: companyName,
             code: code,
-            market: market,
+            market: "KOSPI",
             currentPrice: currentPrice,
             changeAmount: changeAmount,
             changeRate: changeRate,
