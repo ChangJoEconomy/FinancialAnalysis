@@ -1,8 +1,11 @@
 const asyncHandler = require('express-async-handler');
 const yahooFinance = require('yahoo-finance2').default;
 const UserStock = require('../models/UserStock');
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
+const DART_API_KEY = process.env.DART_API_KEY;
 
 const stocks = JSON.parse(fs.readFileSync(path.join(__dirname, '../public/data/all_stocks.json'), 'utf-8'));
 
@@ -37,6 +40,116 @@ function getStockInfoByTicker(ticker) {
     return stocks.find(stock => stock.ticker === ticker);
 }
 
+// 최근 당기순이익과 성장률을 가져오는 함수
+async function getRecentNetIncomeGrowth(corpCode) {
+    // DART_API_KEY가 전역 변수로 설정되어 있다고 가정합니다.
+    if (!DART_API_KEY) {
+        console.error('DART_API_KEY가 설정되지 않았습니다. .env 파일을 확인해주세요.');
+        return null;
+    }
+
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear - 1, currentYear - 2];
+    const results = {};
+
+    const getIncomeDataForYear = async (year) => {
+        // 우선 표준 계정 ID를 사용하는 신규 API로 시도합니다.
+        const standardApiUrl = 'https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json';
+        const standardApiParams = {
+            crtfc_key: DART_API_KEY,
+            corp_code: corpCode,
+            bsns_year: String(year),
+            reprt_code: '11011', // 연간 사업보고서
+            fs_div: 'CFS'
+        };
+
+        try {
+            const res = await axios.get(standardApiUrl, { params: standardApiParams });
+            const { data } = res;
+
+            // API 응답 상태를 먼저 확인합니다.
+            if (data.status !== '000') {
+                console.warn(`${year}년 데이터 조회 실패 (표준 API): ${data.message}`);
+                return null;
+            }
+            
+            // 데이터가 존재하면 'ifrs-full_ProfitLoss' (당기순이익) 계정을 찾습니다.
+            if (data.list && data.list.length > 0) {
+                const incomeData = data.list.find(item => item.account_id === 'ifrs-full_ProfitLoss');
+                if (incomeData) {
+                    return Number(incomeData.thstrm_amount);
+                }
+            }
+        } catch (err) {
+            console.error(`${year}년 표준 API 조회 중 오류 발생:`, err.message);
+        }
+
+        // 표준 API 실패 시, 백업 API로 시도합니다.
+        console.log(`${year}년 표준 API에서 데이터가 없어 백업 API를 시도합니다.`);
+        const backupApiUrl = 'https://opendart.fss.or.kr/api/fnlttSinglAcnt.json';
+        const backupApiParams = {
+            crtfc_key: DART_API_KEY,
+            corp_code: corpCode,
+            bsns_year: String(year),
+            reprt_code: '11011',
+            fs_div: 'CFS'
+        };
+
+        try {
+            const res = await axios.get(backupApiUrl, { params: backupApiParams });
+            const { data } = res;
+
+            if (data.status !== '000') {
+                console.warn(`${year}년 데이터 조회 실패 (백업 API): ${data.message}`);
+                return null;
+            }
+
+            if (data.list && Array.isArray(data.list) && data.list.length > 0) {
+                // 손익계산서(IS) 데이터만 필터링
+                const incomeStatement = data.list.filter(item => item.sj_div === 'IS');
+
+                // '당기순이익' 또는 '당기순손익'을 포함하는 계정을 찾습니다.
+                const netIncome = incomeStatement.find(row =>
+                    row.account_nm.includes('당기순이익') || row.account_nm.includes('당기순손익')
+                );
+
+                if (netIncome) {
+                    // 쉼표 제거 후 숫자 변환
+                    return Number(netIncome.thstrm_amount.replace(/,/g, ''));
+                }
+            }
+        } catch (err) {
+            console.error(`${year}년 백업 API 조회 중 오류 발생:`, err.message);
+        }
+
+        console.warn(`${year}년 당기순이익 데이터를 찾을 수 없습니다.`);
+        return null;
+    };
+
+    // 최신 연도와 이전 연도 데이터 비동기적으로 가져오기
+    results.recentNetIncome = await getIncomeDataForYear(years[0]);
+    results.prevNetIncome = await getIncomeDataForYear(years[1]);
+
+    let growthRate = null;
+    if (results.recentNetIncome !== null && results.prevNetIncome !== null) {
+        // 분모가 0이 아니거나, 양수에서 음수로, 음수에서 양수로 전환되는 경우를 고려한 성장률 계산
+        if (results.prevNetIncome !== 0) {
+            growthRate = ((results.recentNetIncome - results.prevNetIncome) / Math.abs(results.prevNetIncome)) * 100;
+        } else {
+            // 전년도 당기순이익이 0인 경우 (성장률 계산 불가능)
+            growthRate = Infinity; // 또는 null 처리
+        }
+    }
+
+    return {
+        recentYear: years[0],
+        recentNetIncome: results.recentNetIncome,
+        prevYear: years[1],
+        prevNetIncome: results.prevNetIncome,
+        growthRate: growthRate === Infinity ? 'N/A (분모 0)' : (growthRate ? growthRate.toFixed(2) : null)
+    };
+}
+
 // @desc Get Stock Details Page
 // @route GET /stock-details
 const getStockDetailsPage = asyncHandler(async (req, res) => {
@@ -62,6 +175,7 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
                 message: '주식 정보를 찾을 수 없습니다. 잠시후 다시 시도해주세요.'
             });
         }
+        console.log("회사 코드:", corp_code);
 
         // 야후 파이낸스 심볼 변환
         let symbol = code;
@@ -86,31 +200,32 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
         const currentPrice = quote.regularMarketPrice;
         const changeAmount = quote.regularMarketChange;
         const changeRate = quote.regularMarketChangePercent;
+        const marketCap = quote.marketCap;
         
         // 차트 데이터 변환
         const chartData = historical.map(item => ({
             date: item.date.toISOString().split('T')[0],
             price: item.close
         }));
+
+        // 당기 순이익 성장률 계산
+        let netIncomeGrowth = null;
+        const incomeData = await getRecentNetIncomeGrowth(corp_code);
         
         // 더미 재무 데이터 생성
         const dummyFinancials = {
-            netIncome: 250,  // 250억원
-            netIncomeGrowth: 8.5,  // 8.5% 성장
-            marketCap: 45,  // 45조원
-            marketCapRank: 1,  // 1위
-            trailingPE: 12.5,  // 후행 PER
-            futurePER: 11.2,   // 선행 PER
-            industryAvgPER: 14.8, // 업계 평균
-            roe: 15.8,  // ROE 15.8%
-            dividendYield: 2.8,  // 배당수익률 2.8%
+            marketCap: marketCap,  // 시가총액 (원 단위)
+            recentNetIncome: incomeData ? incomeData.recentNetIncome : null,  // 최근 당기순이익
+            recentNetIncomeYear: incomeData ? incomeData.recentYear : null,  // 최근 당기순이익 연도
+            netIncomeGrowth: incomeData ? incomeData.growthRate : null,  // 당기순이익 성장률
+            per: 12.5,  // PER 12.5배
+            debtRatio: 28.3,  // 부채비율 28.3%
+            quickRatio: 1.85,  // 당좌비율 1.85배
+            dividendYield: 2.8,  // 시가배당률 2.8%
             dividend: 1500,  // 배당금 1500원
-            hasRecentCapitalIncrease: false,
-            capitalIncreaseDate: null,
-            paidInCapital: 0,
-            totalAssets: 3500,  // 3500억원
-            totalLiabilities: 1200,  // 1200억원
-            totalEquity: 2300   // 2300억원
+            totalAssets: 3500,  // 3500억원 (재무제표용)
+            totalLiabilities: 1200,  // 1200억원 (재무제표용)
+            totalEquity: 2300   // 2300억원 (재무제표용)
         };
         
         // 더미 뉴스 데이터
@@ -136,31 +251,37 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
         const stock = {
             name: companyName,
             code: code,
-            market: "KOSPI",
+            market: market,
             currentPrice: currentPrice,
             changeAmount: changeAmount,
             changeRate: changeRate,
-            description: '대한민국의 대표적인 글로벌 기업으로 반도체, 스마트폰, 디스플레이 등 다양한 분야에서 세계 최고 수준의 기술력을 보유하고 있습니다.',
+            description: "여기에 기업 개요 정보",   // 현재 더미 데이터
             chartData: chartData,
-            financials: dummyFinancials,
-            news: dummyNews
+            financials: dummyFinancials,          // 더미 재무 데이터
+            news: dummyNews                       // 더미 뉴스 데이터
         };
 
         // 신호등 색상을 템플릿에서 사용할 수 있도록 res.locals에 추가
         res.locals.getSignalColor = (value, metric) => {
             switch (metric) {
-                case 'netIncome':
-                    return getSignalColor(stock.financials.netIncomeGrowth, 'netIncome'); // 성장률 기준으로 변경
                 case 'marketCap':
                     return getSignalColor(value, 'marketCap');
-                case 'trailingPE': // trailingPE 기준으로 변경
+                case 'netIncomeGrowth':
+                    return getSignalColor(value, 'netIncome');
+                case 'per':
                     return getSignalColor(value, 'per');
-                case 'roe':
-                    return getSignalColor(value, 'roe');
+                case 'debtRatio':
+                    // 부채비율: 낮을수록 좋음 (30% 이하 좋음, 50% 이하 보통, 그 이상 나쁨)
+                    if (value <= 30) return 'green';
+                    if (value <= 50) return 'orange';
+                    return 'red';
+                case 'quickRatio':
+                    // 당좌비율: 1.0 이상이 좋음
+                    if (value >= 1.5) return 'green';
+                    if (value >= 1.0) return 'orange';
+                    return 'red';
                 case 'dividendYield':
                     return getSignalColor(value, 'dividendYield');
-                case 'paidInCapital':
-                    return getSignalColor(stock.financials.hasRecentCapitalIncrease, 'capitalIncrease');
                 default:
                     return getSignalColor(value);
             }

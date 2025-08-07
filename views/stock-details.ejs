@@ -65,69 +65,100 @@
                     <div class="signal-light <%= getSignalColor(stock.financials.marketCap, 'marketCap') %>"></div>
                 </div>
                 <div class="financial-value">
-                    ₩<%= stock.financials.marketCap.toLocaleString() %>조
+                    <%= stock.financials.marketCap.toLocaleString() %>원
                 </div>
-                <div class="financial-desc">업계 평균 대비 <%= stock.financials.marketCapRank %>위</div>
+                <div class="financial-desc">  <!-- 시가총액 한글 unit으로 표시 -->
+                    <% 
+                        const marketCap = stock.financials.marketCap;
+                        const trillion = 1_000_000_000_000;
+                        const hundredMillion = 100_000_000;
+                        let displayCap = '';
+                        if (marketCap >= trillion) {
+                            displayCap = Math.floor(marketCap / trillion) + '조 ';
+                            const rest = Math.floor((marketCap % trillion) / hundredMillion);
+                            if (rest > 0) displayCap += rest + '억';
+                        } else if (marketCap >= hundredMillion) {
+                            displayCap = Math.floor(marketCap / hundredMillion) + '억';
+                        } else {
+                            displayCap = marketCap.toLocaleString() + '원';
+                        }
+                    %>
+                    <%= displayCap %>
+                </div>
             </div>
 
-            <!-- 당기순이익 -->
+            <!-- 당기순이익 성장률 -->
             <div class="financial-item">
                 <div class="financial-header">
-                    <span class="financial-label">당기순이익</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.netIncome, 'netIncome') %>"></div>
+                    <span class="financial-label">당기순이익 성장률</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.netIncomeGrowth, 'netIncomeGrowth') %>"></div>
                 </div>
                 <div class="financial-value">
-                    ₩<%= stock.financials.netIncome.toLocaleString() %>억
-                </div>
-                <div class="financial-desc">전년 대비 <%= stock.financials.netIncomeGrowth >= 0 ? '+' : '' %><%= stock.financials.netIncomeGrowth.toFixed(1) %>%</div>
-            </div>
-
-            <!-- 미래 PER -->
-            <div class="financial-item">
-                <div class="financial-header">
-                    <span class="financial-label">미래 PER</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.futurePER) %>"></div>
-                </div>
-                <div class="financial-value"><%= stock.financials.futurePER.toFixed(1) %>배</div>
-                <div class="financial-desc">업계 평균: <%= stock.financials.industryAvgPER.toFixed(1) %>배</div>
-            </div>
-
-            <!-- 재무비율 (ROE) -->
-            <div class="financial-item">
-                <div class="financial-header">
-                    <span class="financial-label">ROE</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.roe) %>"></div>
-                </div>
-                <div class="financial-value"><%= stock.financials.roe.toFixed(1) %>%</div>
-                <div class="financial-desc">자기자본이익률</div>
-            </div>
-
-            <!-- 유상증자 -->
-            <div class="financial-item">
-                <div class="financial-header">
-                    <span class="financial-label">유상증자</span>
-                    <div class="signal-light <%= getSignalColor(stock.financials.paidInCapital) %>"></div>
-                </div>
-                <div class="financial-value">
-                    <% if (stock.financials.hasRecentCapitalIncrease) { %>
-                        예정
-                    <% } else { %>
-                        없음
-                    <% } %>
+                    <%= (stock.financials.netIncomeGrowth !== null && stock.financials.netIncomeGrowth !== undefined)
+                        ? (stock.financials.netIncomeGrowth >= 0 ? '+' : '') + Number(stock.financials.netIncomeGrowth).toFixed(1) + '%'
+                        : '데이터 없음' %>
                 </div>
                 <div class="financial-desc">
-                    <% if (stock.financials.hasRecentCapitalIncrease) { %>
-                        <%= stock.financials.capitalIncreaseDate %>
+                    <% if (stock.financials.recentNetIncome !== null && stock.financials.recentNetIncome !== undefined && stock.financials.recentNetIncomeYear) { %>
+                        <% 
+                            const year = stock.financials.recentNetIncomeYear;
+                            const ni = Number(stock.financials.recentNetIncome);
+                            const absNi = Math.abs(ni);
+                            const trillion = 1_000_000_000_000;
+                            const hundredMillion = 100_000_000;
+                            let displayNI = '';
+                            if (absNi >= trillion) {
+                                displayNI = Math.floor(absNi / trillion) + '조';
+                                const rest = Math.floor((absNi % trillion) / hundredMillion);
+                                if (rest > 0) displayNI += rest + '억';
+                            } else if (absNi >= hundredMillion) {
+                                displayNI = Math.floor(absNi / hundredMillion) + '억';
+                            } else {
+                                displayNI = absNi.toLocaleString() + '원';
+                            }
+                            if (ni < 0) displayNI = '-' + displayNI;
+                        %>
+                        <%= year %>년 당기순이익 <%= displayNI %>
                     <% } else { %>
-                        최근 1년 내 계획 없음
+                        데이터 없음
                     <% } %>
                 </div>
             </div>
 
-            <!-- 배당 -->
+            <!-- PER -->
             <div class="financial-item">
                 <div class="financial-header">
-                    <span class="financial-label">배당수익률</span>
+                    <span class="financial-label">PER</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.per, 'per') %>"></div>
+                </div>
+                <div class="financial-value"><%= stock.financials.per.toFixed(1) %>배</div>
+                <div class="financial-desc">주가수익비율</div>
+            </div>
+
+            <!-- 부채비율 -->
+            <div class="financial-item">
+                <div class="financial-header">
+                    <span class="financial-label">부채비율</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.debtRatio, 'debtRatio') %>"></div>
+                </div>
+                <div class="financial-value"><%= stock.financials.debtRatio.toFixed(1) %>%</div>
+                <div class="financial-desc">총부채/자기자본</div>
+            </div>
+
+            <!-- 당좌비율 -->
+            <div class="financial-item">
+                <div class="financial-header">
+                    <span class="financial-label">당좌비율</span>
+                    <div class="signal-light <%= getSignalColor(stock.financials.quickRatio, 'quickRatio') %>"></div>
+                </div>
+                <div class="financial-value"><%= stock.financials.quickRatio.toFixed(2) %>배</div>
+                <div class="financial-desc">유동성 지표</div>
+            </div>
+
+            <!-- 시가배당률 -->
+            <div class="financial-item">
+                <div class="financial-header">
+                    <span class="financial-label">시가배당률</span>
                     <div class="signal-light <%= getSignalColor(stock.financials.dividendYield, 'dividendYield') %>"></div>
                 </div>
                 <div class="financial-value"><%= stock.financials.dividendYield.toFixed(2) %>%</div>
