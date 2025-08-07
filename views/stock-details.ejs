@@ -389,13 +389,16 @@
         signalLights.forEach(light => {
             const metric = light.dataset.metric;
             const value = light.dataset.value;
-            
             // 기존 색상 클래스 제거
             light.classList.remove('green', 'orange', 'red', 'gray', 'yellow');
-            
             // 새로운 색상 클래스 추가
             const color = getSignalColor(value, metric, preset);
             light.classList.add(color);
+            // 부모 .financial-item에 data-signal 속성 부여
+            const item = light.closest('.financial-item');
+            if (item) {
+                item.setAttribute('data-signal', color);
+            }
         });
     }
 

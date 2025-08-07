@@ -549,3 +549,20 @@
         padding: 14px 20px;
     }
 }
+
+/* 신호등 그라데이션 효과 (financial-item 배경) */
+.financial-item[data-signal="green"] {
+    background: linear-gradient(135deg, #f8f9fa 60%, #e6fbe6 100%);
+}
+.financial-item[data-signal="yellow"] {
+    background: linear-gradient(135deg, #f8f9fa 60%, #fffde7 100%);
+}
+.financial-item[data-signal="orange"] {
+    background: linear-gradient(135deg, #f8f9fa 60%, #fff3e0 100%);
+}
+.financial-item[data-signal="red"] {
+    background: linear-gradient(135deg, #f8f9fa 60%, #ffebee 100%);
+}
+.financial-item[data-signal="gray"] {
+    background: linear-gradient(135deg, #f8f9fa 60%, #eeeeee 100%);
+}
