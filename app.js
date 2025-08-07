@@ -25,6 +25,7 @@ app.use(express.static('public'));
 
 // 라우트 설정
 app.use("/", require('./routes/main'));
+app.use("/api", require('./routes/api'));
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

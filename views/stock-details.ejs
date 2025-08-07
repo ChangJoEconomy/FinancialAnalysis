@@ -170,7 +170,7 @@
                       ? Number(stock.financials.per).toFixed(1)
                       : '데이터 없음' %>
                 </div>
-                <div class="financial-desc">주가수익비율</div>
+                <div class="financial-desc">현재 시가총액 기준</div>
             </div>
 
             <!-- 부채비율 -->
@@ -252,52 +252,31 @@
         </div>
     </div>
 
-    <!-- 추가 정보 섹션 -->
-    <div class="additional-info">
-        <div class="info-tabs">
-            <button class="tab-btn active" data-tab="overview">개요</button>
-            <button class="tab-btn" data-tab="financials">재무제표</button>
-            <button class="tab-btn" data-tab="news">뉴스</button>
+    <!-- AI 분석 섹션 -->
+    <div class="ai-analysis-section">
+        <div class="ai-header">
+            <h2>AI 주식 분석</h2>
+            <p class="ai-description">이 주식에 대해 궁금한 점을 AI에게 질문해보세요</p>
+            <p class="ai-description">ex) 동종 업계 대비 어떤 메리트가 있어?</p>
+            <p class="ai-description">ex) 이 주식을 사면 안 되는 이유 3가지를 알려줘</p>
         </div>
         
-        <div class="tab-content">
-            <div id="overview" class="tab-pane active">
-                <h3>기업 개요</h3>
-                <p><%= stock.description || '기업 정보를 불러오는 중입니다...' %></p>
-            </div>
-            
-            <div id="financials" class="tab-pane">
-                <h3>재무제표 상세</h3>
-                <div class="financial-details">
-                    <div class="financial-row">
-                        <span>총 자산:</span>
-                        <span>₩<%= stock.financials.totalAssets.toLocaleString() %>억</span>
-                    </div>
-                    <div class="financial-row">
-                        <span>총 부채:</span>
-                        <span>₩<%= stock.financials.totalLiabilities.toLocaleString() %>억</span>
-                    </div>
-                    <div class="financial-row">
-                        <span>자기자본:</span>
-                        <span>₩<%= stock.financials.totalEquity.toLocaleString() %>억</span>
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="ai-message">
+                    <div class="message-content">
+                        <p>안녕하세요! <%= stock.name %>에 대해 궁금한 점이 있으시면 언제든 질문해주세요. 재무정보, 투자 전망, 업계 동향 등 다양한 주제로 대화할 수 있습니다.</p>
                     </div>
                 </div>
             </div>
             
-            <div id="news" class="tab-pane">
-                <h3>관련 뉴스</h3>
-                <div class="news-list">
-                    <% if (stock.news && stock.news.length > 0) { %>
-                        <% stock.news.forEach(newsItem => { %>
-                            <div class="news-item">
-                                <h4><%= newsItem.title %></h4>
-                                <p><%= newsItem.summary %></p>
-                                <small><%= newsItem.date %></small>
-                            </div>
-                        <% }) %>
-                    <% } else { %>
-                        <p>관련 뉴스를 불러오는 중입니다...</p>
-                    <% } %>
+            <div class="chat-input-container">
+                <div class="input-wrapper">
+                    <textarea id="chatInput" placeholder="<%= stock.name %>에 대해 질문하세요..." rows="2"></textarea>
+                    <button id="sendButton" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                        전송
+                    </button>
                 </div>
             </div>
         </div>
@@ -306,11 +285,14 @@
 
 <script>
     // 서버에서 전달받은 차트 데이터를 JavaScript 변수로 설정
-    window.stockChartData = {
-        labels: <%- JSON.stringify(stock.chartData.map(item => item.date)) %>,
-        prices: <%- JSON.stringify(stock.chartData.map(item => item.price)) %>
-    };
+    window.stockChartData = <%- JSON.stringify({
+        labels: stock.chartData ? stock.chartData.map(item => item.date) : [],
+        prices: stock.chartData ? stock.chartData.map(item => item.price) : []
+    }) %>;
     window.stockCurrency = '<%= stock.currency %>';
+    
+    // stock 데이터를 안전하게 전역 변수로 설정
+    window.stockData = <%- JSON.stringify(stock) %>;
 
     // 프리셋 데이터를 JavaScript 변수로 설정
     <% if (user && presets) { %>
@@ -414,7 +396,143 @@
         if (window.defaultPresetName) {
             updateSignalLights(window.defaultPresetName);
         }
+        // llm
+        
+        // 텍스트 영역 자동 크기 조정 개선
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                const max = parseInt(window.getComputedStyle(this).maxHeight) || 80;
+                if (this.scrollHeight > max) {
+                    this.style.height = max + 'px';
+                    this.style.overflowY = 'auto';
+                } else {
+                    this.style.height = this.scrollHeight + 'px';
+                    this.style.overflowY = 'hidden';
+                }
+            });
+            // Enter 키로 전송 (Shift+Enter는 줄바꿈)
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
     });
+
+    // llm 기능
+    // 메시지 전송 함수
+    function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        
+        if (!message) return;
+        
+        // 사용자 메시지 추가
+        addMessage(message, 'user');
+        input.value = '';
+        input.style.height = 'auto';
+        
+        // 전송 버튼 비활성화
+        const sendButton = document.getElementById('sendButton');
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 전송 중...';
+        
+        // AI 응답 요청
+        fetch('/api/stock-chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                stock: window.stockData
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                addMessage(data.response, 'ai');
+            } else {
+                addMessage('죄송합니다. 현재 AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.', 'ai');
+            }
+        })
+        .catch(error => {
+            console.error('Chat error:', error);
+            addMessage('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'ai');
+        })
+        .finally(() => {
+            // 전송 버튼 활성화
+            sendButton.disabled = false;
+            sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> 전송';
+        });
+    }
+
+    // 메시지 추가 함수
+    function addMessage(message, type) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = type === 'user' ? 'user-message' : 'ai-message';
+        let html = '';
+        if (type === 'ai') {
+            // 마크다운 스타일 적용: **굵게**, *기울임*, 리스트 등 지원
+            html = `<div class="message-content">${renderMarkdown(message)}</div>`;
+        } else {
+            html = `<div class="message-content"><p>${message.replace(/\n/g, '<br>')}</p></div>`;
+        }
+        messageDiv.innerHTML = html;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // 간단한 마크다운 렌더링 함수 (굵게, 기울임, 리스트, 줄바꿈)
+    function renderMarkdown(text) {
+        if (!text) return '';
+        let html = text
+            // **굵게**
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            // *기울임*
+            .replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+        // 1. 줄 단위로 분리
+        const lines = html.split(/\r?\n/);
+        let result = '';
+        let inList = false;
+        lines.forEach((line, idx) => {
+            const isList = /^\s*\* (.+)/.test(line);
+            const isBold = /^\s*<strong>.*<\/strong>\s*$/.test(line);
+            if (isList) {
+                if (!inList) {
+                    // 리스트 시작 전 단락 닫기
+                    result += '<ul>';
+                    inList = true;
+                }
+                // 리스트 항목 추가
+                result += line.replace(/^\s*\* (.+)/, '<li>$1</li>');
+            } else {
+                if (inList) {
+                    result += '</ul>';
+                    inList = false;
+                }
+                if (isBold) {
+                    // 굵은 제목은 단락으로
+                    result += `<p>${line}</p>`;
+                } else if (line.trim() === '') {
+                    // 빈 줄은 단락 구분
+                    result += '';
+                } else {
+                    // 일반 텍스트는 <p>
+                    result += `<p>${line}</p>`;
+                }
+            }
+        });
+        if (inList) result += '</ul>';
+        // <p> 단락이 중복되지 않게 정리
+        result = result.replace(/(<p>\s*)+/g, '<p>').replace(/(\s*<\/p>)+/g, '</p>');
+        return result;
+    }
 
     // 내 종목 추가/제거 AJAX
     function toggleFavoriteStock(add) {

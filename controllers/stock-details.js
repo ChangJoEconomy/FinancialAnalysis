@@ -362,30 +362,7 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             dividendYield: dividendInfo ? parseFloat(dividendInfo.dividendYield) : null,
             dividend: dividendInfo ? dividendInfo.dividendPerShare : null,
             dividendYear: dividendInfo ? dividendInfo.year : null,
-            // 기타정보 (나중에 뺄듯)
-            totalAssets: 3500,
-            totalLiabilities: 1200,
-            totalEquity: 2300,
         };
-
-        // 더미 뉴스 데이터
-        const dummyNews = [
-            {
-                title: `${companyName} 3분기 실적 호조`,
-                summary: '3분기 영업이익이 전년 동기 대비 15% 증가하며 시장 기대치를 상회했습니다.',
-                date: new Date().toISOString().split('T')[0]
-            },
-            {
-                title: `${companyName} 신규 투자 계획 발표`,
-                summary: '반도체 부문 확장을 위한 대규모 투자 계획을 발표했습니다.',
-                date: new Date(Date.now() - 86400000).toISOString().split('T')[0]
-            },
-            {
-                title: `${companyName} 배당금 인상 결정`,
-                summary: '주주 환원 정책 강화의 일환으로 배당금을 전년 대비 5% 인상하기로 결정했습니다.',
-                date: new Date(Date.now() - 172800000).toISOString().split('T')[0]
-            }
-        ];
         // --------------------------------------------------------------------------------------------------------
 
         const stock = {
@@ -397,7 +374,6 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             changeRate: changeRate,
             chartData: chartData,
             financials: Financials,
-            news: dummyNews
         };
 
         // 내 종목 여부 확인
