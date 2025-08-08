@@ -224,7 +224,38 @@
                     <%= Number(stock.financials.quickRatio).toFixed(2) %>배
                 <% } %>
             </div>
-            <div class="financial-desc">유동성 지표</div>
+            <div class="financial-desc">
+                <% 
+                    if (
+                        stock.financials.quickYear &&
+                        stock.financials.currentLiabilities !== null &&
+                        stock.financials.currentLiabilities !== undefined &&
+                        !isNaN(Number(stock.financials.currentLiabilities))
+                    ) {
+                        const year = stock.financials.quickYear;
+                        const liabilities = Number(stock.financials.currentLiabilities);
+                        const trillion = 1_000_000_000_000;
+                        const hundredMillion = 100_000_000;
+                        let displayLiabilities = '';
+                        if (liabilities >= trillion) {
+                            displayLiabilities = Math.floor(liabilities / trillion) + '조';
+                            const rest = Math.floor((liabilities % trillion) / hundredMillion);
+                            if (rest > 0) displayLiabilities += rest + '억';
+                        } else if (liabilities >= hundredMillion) {
+                            displayLiabilities = Math.floor(liabilities / hundredMillion) + '억';
+                        } else {
+                            displayLiabilities = liabilities.toLocaleString() + '원';
+                        }
+                %>
+                    <%= year %>년 유동부채 <%= displayLiabilities %>
+                <% 
+                    } else { 
+                %>
+                    데이터 없음
+                <% 
+                    } 
+                %>
+            </div>
             </div>
 
             <!-- 시가배당률 -->

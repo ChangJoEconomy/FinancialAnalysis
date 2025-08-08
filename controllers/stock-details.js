@@ -170,14 +170,15 @@ async function fetchBasicAndChartData(code, market) {
     return { currentPrice, changeAmount, changeRate, marketCap, chartData };
 }
 
-// 부채비율과 총부채만 조회
+// 부채비율과 총부채, 당좌비율, 유동부채 조회
 async function getDebtInfo(corpCode) {
-    const API_URL = 'https://opendart.fss.or.kr/api/fnlttSinglAcnt.json';
+    const API_URL = 'https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json';
     const REPORT_CODE = '11011'; // 사업보고서
     const currentYear = new Date().getFullYear();
 
     let data = null;
     let balanceSheet = null;
+    let targetYear = null;
 
     for (let year = currentYear - 1; year >= currentYear - 3; year--) {
         try {
@@ -200,7 +201,8 @@ async function getDebtInfo(corpCode) {
                 if (balanceSheet.length > 0) break;
             }
         } catch (err) {
-            // 무시 (작년 데이터로 다시 요청시도)
+            // API 호출 오류는 무시하고, 작년 데이터로 다시 요청 시도
+            // console.error(`Error fetching data for year ${year}:`, err);
         }
     }
 
@@ -218,20 +220,50 @@ async function getDebtInfo(corpCode) {
         item.account_nm.includes('자기자본')
     );
 
+    // 유동자산, 재고자산, 선급비용, 유동부채 항목을 찾습니다.
+    const currentAssetsItem = balanceSheet.find(item => item.account_nm.includes('유동자산'));
+    const inventoriesItem = balanceSheet.find(item => item.account_nm.includes('재고자산'));
+    const prepaidExpensesItem = balanceSheet.find(item => item.account_nm.includes('선급비용'));
+    const currentLiabilitiesItem = balanceSheet.find(item => item.account_nm.includes('유동부채'));
+
     let debtRatio = null;
     let totalDebtAmount = null;
+    let quickRatio = null;
+    let currentLiabilitiesAmount = null;
+
 
     if (totalDebt && totalEquity) {
         const debtAmount = Number(totalDebt.thstrm_amount.replace(/,/g, ''));
         const equityAmount = Number(totalEquity.thstrm_amount.replace(/,/g, ''));
-        debtRatio = (debtAmount / equityAmount) * 100;
+        if (equityAmount !== 0) {
+            debtRatio = (debtAmount / equityAmount) * 100;
+        }
         totalDebtAmount = debtAmount;
     }
+    
+    // quickRatio = (유동자산 - 재고자산 - 선급비용) / 유동부채
+    if (currentAssetsItem && currentLiabilitiesItem) {
+        // 재고자산, 선급비용은 없으면 0 처리
+        const currentAssets = Number(currentAssetsItem.thstrm_amount.replace(/,/g, ''));
+        const inventories = inventoriesItem ? Number(inventoriesItem.thstrm_amount.replace(/,/g, '')) : 0;
+        const prepaidExpenses = prepaidExpensesItem ? Number(prepaidExpensesItem.thstrm_amount.replace(/,/g, '')) : 0;
+        const currentLiabilities = Number(currentLiabilitiesItem.thstrm_amount.replace(/,/g, ''));
+
+        const quickAssets = currentAssets - inventories - prepaidExpenses;
+
+        if (currentLiabilities !== 0) {
+            quickRatio = (quickAssets / currentLiabilities) * 100;
+        }
+        currentLiabilitiesAmount = currentLiabilities;
+    }
+
 
     return {
         year: targetYear,
         debtRatio,
-        totalDebt: totalDebtAmount
+        totalDebt: totalDebtAmount,
+        quickRatio,
+        currentLiabilities: currentLiabilitiesAmount
     };
 }
 
@@ -331,13 +363,13 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             per = (marketCap / (incomeData.recentNetIncome));
         }
 
-        // 부채비율 계산
+        // 부채관련 모든정보 조회
         const debtInfo = await getDebtInfo(corp_code);
         const debtRatio = debtInfo ? debtInfo.debtRatio : null;
         const debtYear = debtInfo ? debtInfo.year : null;
         const totalDebt = debtInfo ? debtInfo.totalDebt : null;
-
-        // 당좌비율 계산
+        const quickRatio = debtInfo ? debtInfo.quickRatio : null;
+        const currentLiabilities = debtInfo ? debtInfo.currentLiabilities : null;
 
         // 배당수익률 계산
         const dividendInfo = await getCommonStockDividend(corp_code);
@@ -357,7 +389,9 @@ const getStockDetailsPage = asyncHandler(async (req, res) => {
             debtYear: debtYear,
             totalDebt: totalDebt,
             // 당좌비율
-            quickRatio: null, // TODO: 실제 계산 로직 추가
+            quickRatio: quickRatio,
+            quickYear: debtYear,
+            currentLiabilities: currentLiabilities,
             // 배당금 정보
             dividendYield: dividendInfo ? parseFloat(dividendInfo.dividendYield) : null,
             dividend: dividendInfo ? dividendInfo.dividendPerShare : null,
