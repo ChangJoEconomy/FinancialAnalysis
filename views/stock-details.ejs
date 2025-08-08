@@ -221,7 +221,7 @@
                 <% if (stock.financials.quickRatio === null || stock.financials.quickRatio === undefined || isNaN(Number(stock.financials.quickRatio))) { %>
                     데이터 없음
                 <% } else { %>
-                    <%= Number(stock.financials.quickRatio).toFixed(2) %>배
+                    <%= Number(stock.financials.quickRatio).toFixed(2) %>%
                 <% } %>
             </div>
             <div class="financial-desc">
