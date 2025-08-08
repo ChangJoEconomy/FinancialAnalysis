@@ -1,0 +1,49 @@
+name: Deploy to cloudtype
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    # 매일 아침 7시(한국 시간)에 실행되도록 설정
+    # KST(UTC+9)로 아침 7시는 UTC 기준 전날 22시입니다.
+    - cron: '0 22 * * *'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Connect deploy key
+        uses: cloudtype-github-actions/connect@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          ghtoken: ${{ secrets.GHP_TOKEN }}
+      - name: Deploy
+        uses: cloudtype-github-actions/deploy@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          project: ckdwh421/financial-analysis
+          stage: main
+          yaml: >
+            name: financial-analysis
+
+            app: node@22
+
+            options:
+              ports: "3000"
+              env:
+                - name: PORT
+                  value: ${{ secrets.PORT }}
+                - name: DB_CONNECT
+                  value: ${{ secrets.DB_CONNECT }}
+                - name: DART_API_KEY
+                  value: ${{ secrets.DART_API_KEY }}
+                - name: GEMINI_API_KEY
+                  value: ${{ secrets.GEMINI_API_KEY }}
+                - name: JWT_SECRET
+                  value: ${{ secrets.JWT_SECRET }}
+              buildenv: []
+            context:
+              git:
+                url: git@github.com:${{ github.repository }}.git
+                ref: ${{ github.ref }}
