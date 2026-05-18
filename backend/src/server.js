@@ -5,6 +5,7 @@ import { corsHeaders, sendJson, sendNotFound } from './utils/http.js';
 import { handleAuthRoute } from './routes/auth.js';
 import { handleHealthRoute } from './routes/health.js';
 import { handleMeRoute } from './routes/me.js';
+import { handleStocksRoute } from './routes/stocks.js';
 
 loadEnv();
 
@@ -35,6 +36,11 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname.startsWith('/api/stocks') || url.pathname.startsWith('/stocks')) {
+    await handleStocksRoute(req, res, url);
+    return;
+  }
+
   if (url.pathname === '/') {
     sendJson(res, {
       service: 'financial-analysis-backend',
@@ -47,7 +53,8 @@ const server = createServer(async (req, res) => {
         '/api/auth/me',
         '/api/me/favorite-stocks',
         '/api/me/search-histories',
-        '/api/me/chat-sessions'
+        '/api/me/chat-sessions',
+        '/api/stocks/search?q=삼성전자'
       ]
     });
     return;

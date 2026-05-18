@@ -79,6 +79,14 @@ export async function recordSearchHistory(userId, { queryText, stockId = null, r
     throw badRequest('queryText is required.');
   }
 
+  if (stockId !== null && (!Number.isInteger(Number(stockId)) || Number(stockId) <= 0)) {
+    throw badRequest('stockId must be a positive integer.');
+  }
+
+  if (!Number.isInteger(Number(resultCount)) || Number(resultCount) < 0) {
+    throw badRequest('resultCount must be a non-negative integer.');
+  }
+
   const rows = await requestSupabaseRest('stock_search_histories', {
     method: 'POST',
     prefer: 'return=representation',

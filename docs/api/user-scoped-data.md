@@ -48,6 +48,8 @@ Authorization: Bearer <accessToken>
 
 `user_id`는 서버가 로그인 사용자 기준으로 주입한다.
 
+검색 결과 클릭 흐름에서는 같은 저장 로직을 사용하는 `POST /api/stocks/search-click`을 호출한다.
+
 ## GET /api/me/chat-sessions
 
 현재 로그인 사용자의 AI 채팅 세션만 조회한다.

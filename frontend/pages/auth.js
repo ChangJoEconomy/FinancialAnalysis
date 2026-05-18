@@ -1,9 +1,12 @@
 import {
   clearAccessToken,
   getMe,
+  getSearchHistories,
   getStoredAccessToken,
   login,
   logout,
+  recordStockSearchClick,
+  searchStocks,
   signup,
   storeAccessToken
 } from '../lib/api.js';
@@ -14,6 +17,13 @@ const signupForm = document.querySelector('[data-signup-form]');
 const loginForm = document.querySelector('[data-login-form]');
 const meButton = document.querySelector('[data-me-button]');
 const logoutButton = document.querySelector('[data-logout-button]');
+const stockSearchForm = document.querySelector('[data-stock-search-form]');
+const stockSearchInput = document.querySelector('[data-stock-search-input]');
+const stockSearchResultsEl = document.querySelector('[data-stock-search-results]');
+const searchHistoriesEl = document.querySelector('[data-search-histories]');
+
+let lastSearchQuery = '';
+let lastSearchResultCount = 0;
 
 signupForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -66,8 +76,51 @@ logoutButton.addEventListener('click', async () => {
   }
 });
 
+stockSearchForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  lastSearchQuery = stockSearchInput.value.trim();
+
+  if (!lastSearchQuery) {
+    setStatus('검색어를 입력하세요.');
+    return;
+  }
+
+  setStatus('종목 검색 중...');
+
+  try {
+    const results = await searchStocks(lastSearchQuery);
+    lastSearchResultCount = results.length;
+    renderStockResults(results);
+    setStatus(`${results.length}개 종목을 찾았습니다.`);
+  } catch (error) {
+    showError(error);
+  }
+});
+
+stockSearchResultsEl.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-stock-id]');
+  if (!button) {
+    return;
+  }
+
+  setStatus('검색 기록 저장 중...');
+
+  try {
+    await recordStockSearchClick({
+      queryText: lastSearchQuery,
+      stockId: Number(button.dataset.stockId),
+      resultCount: lastSearchResultCount
+    });
+    await loadSearchHistories();
+    setStatus('검색 기록을 저장했습니다.');
+  } catch (error) {
+    showError(error);
+  }
+});
+
 if (getStoredAccessToken()) {
   meButton.click();
+  loadSearchHistories();
 }
 
 function handleAuthResult(result, message) {
@@ -93,6 +146,45 @@ function renderUser(user) {
     auth_user_id: user.provider_user_id,
     last_login_at: user.last_login_at
   }, null, 2);
+}
+
+function renderStockResults(results) {
+  if (!results.length) {
+    stockSearchResultsEl.innerHTML = '<li>검색 결과가 없습니다.</li>';
+    return;
+  }
+
+  stockSearchResultsEl.innerHTML = results.map((stock) => `
+    <li>
+      <button class="result-button" type="button" data-stock-id="${stock.stock_id}">
+        <strong>${stock.company_name_ko}</strong>
+        <span>${stock.stock_code} · ${stock.market} · ${stock.matched_value || stock.ticker}</span>
+      </button>
+    </li>
+  `).join('');
+}
+
+async function loadSearchHistories() {
+  try {
+    const result = await getSearchHistories();
+    renderSearchHistories(result.data || []);
+  } catch {
+    searchHistoriesEl.innerHTML = '<li>로그인 후 확인할 수 있습니다.</li>';
+  }
+}
+
+function renderSearchHistories(histories) {
+  if (!histories.length) {
+    searchHistoriesEl.innerHTML = '<li>최근 검색 기록이 없습니다.</li>';
+    return;
+  }
+
+  searchHistoriesEl.innerHTML = histories.map((history) => `
+    <li>
+      <strong>${history.query_text}</strong>
+      <span>${history.stocks?.company_name_ko || '선택 종목 없음'} · 결과 ${history.result_count}개</span>
+    </li>
+  `).join('');
 }
 
 function setStatus(message) {

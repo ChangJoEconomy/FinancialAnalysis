@@ -1,6 +1,6 @@
 import { requestSupabaseRest } from './supabaseRestRepository.js';
 
-const STOCK_SELECT = [
+export const STOCK_SELECT = [
   'stock_id',
   'stock_code',
   'ticker',
@@ -111,4 +111,30 @@ export async function searchStockAliases(query) {
   return requestSupabaseRest(
     `stock_aliases?select=alias_id,alias_name,alias_type,stocks(${STOCK_SELECT})&alias_name=eq.${encodeURIComponent(query)}`
   );
+}
+
+export async function searchStocksByFields(query, limit = 20) {
+  const searchPattern = buildIlikePattern(query);
+  const filters = [
+    `company_name_ko.ilike.${searchPattern}`,
+    `company_name_en.ilike.${searchPattern}`,
+    `stock_code.ilike.${searchPattern}`,
+    `ticker.ilike.${searchPattern}`
+  ].join(',');
+
+  return requestSupabaseRest(
+    `stocks?select=${STOCK_SELECT}&is_active=eq.true&or=${encodeURIComponent(`(${filters})`)}&limit=${Number(limit) || 20}`
+  );
+}
+
+export async function searchStockAliasesByName(query, limit = 20) {
+  const searchPattern = buildIlikePattern(query);
+
+  return requestSupabaseRest(
+    `stock_aliases?select=alias_id,alias_name,alias_type,stocks(${STOCK_SELECT})&alias_name=ilike.${encodeURIComponent(searchPattern)}&limit=${Number(limit) || 20}`
+  );
+}
+
+function buildIlikePattern(query) {
+  return `*${query.trim()}*`;
 }

@@ -1,6 +1,6 @@
 # AI 주식 분석 서비스 프로젝트 진행 단계
 
-> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료**  
+> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료 + 종목 검색 API 구현 완료 + 검색 기록 저장 구현 완료**  
 > 다음 목표: **종목 검색 → 재무 데이터 수집 → 지표 계산 → AI 신호등 분석 → 화면 표시**까지 MVP 흐름 완성
 
 ---
@@ -483,6 +483,31 @@ stock_aliases.alias_name
 별칭 검색도 동작한다.
 ```
 
+현재 완료 내용:
+
+```text
+backend
+- GET /api/stocks/search?q=검색어 구현
+- 문서 예시 호환용 GET /stocks/search?q=검색어 구현
+- stocks.company_name_ko 검색
+- stocks.company_name_en 검색
+- stocks.stock_code 검색
+- stocks.ticker 검색
+- stock_aliases.alias_name 검색
+- stocks 결과와 aliases 결과를 stock_id 기준으로 중복 제거
+
+docs
+- docs/api/stocks.md 추가
+```
+
+조회 테스트:
+
+```text
+curl -G http://127.0.0.1:4000/api/stocks/search --data-urlencode q=삼성전자
+curl -G http://127.0.0.1:4000/api/stocks/search --data-urlencode q=삼전
+GET /api/stocks/search?q=005930
+```
+
 ---
 
 ## Step 4-2. 검색 기록 저장
@@ -510,6 +535,37 @@ stock_search_histories
 ```text
 사용자가 삼성전자를 검색하고 클릭하면 stock_search_histories에 기록된다.
 최근 본 종목 목록을 만들 수 있다.
+```
+
+현재 완료 내용:
+
+```text
+backend
+- POST /api/stocks/search-click 구현
+- POST /stocks/search-click 문서 예시 호환 경로 구현
+- accessToken으로 현재 로그인 사용자 확인
+- 요청 body에서 user_id를 받지 않고 서버가 user_id 주입
+- stock_search_histories에 query_text, stock_id, result_count, searched_at 저장
+- GET /api/me/search-histories로 최근 검색 기록 조회 가능
+
+frontend
+- 개발용 종목 검색 UI 추가
+- 검색 결과 클릭 시 POST /api/stocks/search-click 호출
+- 저장 후 최근 검색 기록 목록 갱신
+
+docs
+- docs/api/stocks.md에 검색 클릭 저장 API 추가
+```
+
+테스트 흐름:
+
+```text
+1. 백엔드 실행
+2. 프론트엔드 실행
+3. 회원가입 또는 로그인
+4. 삼성전자 검색
+5. 검색 결과에서 삼성전자 클릭
+6. 최근 검색 기록에 삼성전자 표시 확인
 ```
 
 ---

@@ -49,6 +49,28 @@ export async function logout() {
   clearAccessToken();
 }
 
+export async function searchStocks(query) {
+  const params = new URLSearchParams({ q: query });
+  return request(`/api/stocks/search?${params.toString()}`, {
+    method: 'GET'
+  });
+}
+
+export async function recordStockSearchClick(payload) {
+  return request('/api/stocks/search-click', {
+    method: 'POST',
+    body: payload,
+    accessToken: getStoredAccessToken()
+  });
+}
+
+export async function getSearchHistories() {
+  return request('/api/me/search-histories?limit=10', {
+    method: 'GET',
+    accessToken: getStoredAccessToken()
+  });
+}
+
 async function request(path, { method, body, accessToken } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,

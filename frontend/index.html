@@ -86,6 +86,56 @@
         gap: 10px;
       }
 
+      .wide {
+        grid-column: 1 / -1;
+      }
+
+      .result-list {
+        display: grid;
+        gap: 8px;
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .result-list li {
+        margin: 0;
+      }
+
+      .result-button {
+        display: grid;
+        width: 100%;
+        min-height: 56px;
+        justify-items: start;
+        gap: 4px;
+        border: 1px solid #d7e0da;
+        color: #17201a;
+        background: #f8fbf9;
+        text-align: left;
+      }
+
+      .result-button span,
+      .history-list span {
+        color: #5f6b7a;
+        font-size: 13px;
+        font-weight: 400;
+      }
+
+      .history-list {
+        display: grid;
+        gap: 8px;
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .history-list li {
+        display: grid;
+        gap: 4px;
+        border-bottom: 1px solid #edf0f4;
+        padding: 8px 0;
+      }
+
       .status {
         margin-top: 20px;
         color: #445064;
@@ -152,6 +202,27 @@
               <button class="secondary" type="button" data-logout-button>로그아웃</button>
             </div>
           </form>
+        </section>
+
+        <section class="wide">
+          <h2>종목 검색</h2>
+          <form data-stock-search-form>
+            <label>
+              검색어
+              <input data-stock-search-input type="search" value="삼성전자" />
+            </label>
+            <button type="submit">검색</button>
+          </form>
+          <ul class="result-list" data-stock-search-results>
+            <li>검색 결과가 없습니다.</li>
+          </ul>
+        </section>
+
+        <section class="wide">
+          <h2>최근 검색 기록</h2>
+          <ul class="history-list" data-search-histories>
+            <li>로그인 후 확인할 수 있습니다.</li>
+          </ul>
         </section>
       </div>
 
