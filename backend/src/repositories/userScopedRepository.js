@@ -1,4 +1,4 @@
-import { requestSupabaseRest } from './userRepository.js';
+import { requestSupabaseRest } from './supabaseRestRepository.js';
 
 const FAVORITE_SELECT = [
   'favorite_id',

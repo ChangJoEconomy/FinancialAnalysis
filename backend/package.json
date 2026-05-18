@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node src/server.js",
     "start": "node src/server.js",
-    "check:db": "node src/workers/checkSupabaseConnection.js"
+    "check:db": "node src/workers/checkSupabaseConnection.js",
+    "seed:stock:samsung": "node src/workers/seedSamsungStock.js"
   },
   "engines": {
     "node": ">=18"

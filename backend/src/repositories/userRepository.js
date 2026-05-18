@@ -1,4 +1,4 @@
-import { getSupabaseRestUrl, getSupabaseServiceRoleKey } from '../config/supabase.js';
+import { requestSupabaseRest } from './supabaseRestRepository.js';
 
 const USER_SELECT = 'user_id,email,nickname,login_provider,provider_user_id,status,last_login_at,created_at,updated_at';
 const LOGIN_PROVIDER = 'local';
@@ -75,38 +75,6 @@ export async function ensureUserProfileForAuthUser(authUser, nickname) {
   return createUserProfileFromAuthUser(authUser, nickname);
 }
 
-export async function requestSupabaseRest(path, { method = 'GET', prefer, body } = {}) {
-  const serviceRoleKey = getSupabaseServiceRoleKey();
-  const response = await fetch(getSupabaseRestUrl(path), {
-    method,
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      ...(prefer ? { Prefer: prefer } : {})
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-
-  const data = await readJson(response);
-
-  if (!response.ok) {
-    const message = data?.message || data?.hint || 'Supabase REST request failed.';
-    throw Object.assign(new Error(message), {
-      statusCode: response.status,
-      details: data
-    });
-  }
-
-  return data || [];
-}
-
 function emailName(email) {
   return email?.split('@')[0] || 'user';
-}
-
-async function readJson(response) {
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
 }

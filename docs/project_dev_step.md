@@ -1,6 +1,6 @@
 # AI 주식 분석 서비스 프로젝트 진행 단계
 
-> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료**  
+> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료**  
 > 다음 목표: **종목 검색 → 재무 데이터 수집 → 지표 계산 → AI 신호등 분석 → 화면 표시**까지 MVP 흐름 완성
 
 ---
@@ -352,7 +352,7 @@ NAVER
 | company_name_ko | 삼성전자 |
 | company_name_en | Samsung Electronics |
 | market | KOSPI |
-| dart_corp_code | DART 기업 고유 코드 |
+| dart_corp_code | 00126380 |
 | industry_name | 반도체 / 전자제품 등 |
 | is_active | true |
 
@@ -361,6 +361,35 @@ NAVER
 ```text
 stocks 테이블에 테스트 종목 5개가 들어간다.
 각 종목은 stock_id로 식별된다.
+```
+
+현재 완료 내용:
+
+```text
+테스트를 위해 삼성전자 1개 종목을 먼저 입력했다.
+
+stocks
+- stock_id: 1
+- stock_code: 005930
+- ticker: 005930.KS
+- company_name_ko: 삼성전자
+- company_name_en: Samsung Electronics
+- market: KOSPI
+- dart_corp_code: 00126380
+- industry_name: 반도체 / 전자제품
+- is_active: true
+
+실행 명령:
+cd backend
+npm run seed:stock:samsung
+```
+
+조회 테스트 결과:
+
+```text
+stock_code=005930 조회 성공
+company_name_ko=삼성전자 확인
+stock_id=1 확인
 ```
 
 ---
@@ -391,6 +420,24 @@ stock_aliases
 "삼성전자" 검색 가능
 "삼전" 검색 가능
 "005930" 검색 가능
+```
+
+현재 완료 내용:
+
+```text
+삼성전자 별칭 5개 입력 완료
+
+stock_aliases
+- 삼성전자
+- 삼전
+- 005930
+- Samsung Electronics
+- Samsung
+
+조회 테스트:
+- alias_name=삼성전자 조회 성공
+- alias_name=삼전 조회 성공
+- alias_name=005930 조회 성공
 ```
 
 ---
