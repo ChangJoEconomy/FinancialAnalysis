@@ -2,6 +2,7 @@ import {
   searchStockAliasesByName,
   searchStocksByFields
 } from '../repositories/stockRepository.js';
+import { listRecentSearchHistoriesForPopular } from '../repositories/userScopedRepository.js';
 
 export async function searchStocks(query, limit = 20) {
   const normalizedQuery = query?.trim();
@@ -16,6 +17,46 @@ export async function searchStocks(query, limit = 20) {
   ]);
 
   return mergeSearchResults(normalizedQuery, stockMatches, aliasMatches).slice(0, Number(limit) || 20);
+}
+
+export async function getPopularStocks(limit = 5) {
+  const histories = await listRecentSearchHistoriesForPopular(200);
+  const byStockId = new Map();
+
+  for (const history of histories) {
+    if (!history.stock_id || !history.stocks) {
+      continue;
+    }
+
+    const existing = byStockId.get(history.stock_id);
+    if (existing) {
+      existing.search_count += 1;
+      if (history.searched_at > existing.last_searched_at) {
+        existing.last_searched_at = history.searched_at;
+      }
+      continue;
+    }
+
+    byStockId.set(history.stock_id, {
+      stock_id: history.stock_id,
+      stock_code: history.stocks.stock_code,
+      ticker: history.stocks.ticker,
+      company_name_ko: history.stocks.company_name_ko,
+      market: history.stocks.market,
+      search_count: 1,
+      last_searched_at: history.searched_at
+    });
+  }
+
+  return [...byStockId.values()]
+    .sort((a, b) => {
+      if (b.search_count !== a.search_count) {
+        return b.search_count - a.search_count;
+      }
+
+      return new Date(b.last_searched_at) - new Date(a.last_searched_at);
+    })
+    .slice(0, Number(limit) || 5);
 }
 
 function mergeSearchResults(query, stockMatches, aliasMatches) {

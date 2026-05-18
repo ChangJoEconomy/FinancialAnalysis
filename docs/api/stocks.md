@@ -76,3 +76,29 @@ Authorization: Bearer <accessToken>
 백엔드가 accessToken으로 현재 로그인 사용자를 확인한다.
 stock_search_histories.user_id는 서버가 주입한다.
 ```
+
+## GET /api/stocks/popular
+
+최근 `stock_search_histories`를 집계해 인기 검색종목을 반환한다.
+
+요청:
+
+```http
+GET /api/stocks/popular?limit=5
+```
+
+응답:
+
+```json
+[
+  {
+    "stock_id": 1,
+    "stock_code": "005930",
+    "ticker": "005930.KS",
+    "company_name_ko": "삼성전자",
+    "market": "KOSPI",
+    "search_count": 3,
+    "last_searched_at": "2026-05-18T10:00:00.000Z"
+  }
+]
+```

@@ -56,6 +56,12 @@ export async function searchStocks(query) {
   });
 }
 
+export async function getPopularStocks() {
+  return request('/api/stocks/popular?limit=5', {
+    method: 'GET'
+  });
+}
+
 export async function recordStockSearchClick(payload) {
   return request('/api/stocks/search-click', {
     method: 'POST',

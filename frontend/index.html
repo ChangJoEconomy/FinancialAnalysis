@@ -5,230 +5,455 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI 주식 분석 서비스</title>
     <style>
-      body {
-        margin: 0;
-        font-family: Arial, sans-serif;
+      :root {
         color: #202124;
-        background: #f7f8fa;
+        background: #ffffff;
+        font-family: Arial, sans-serif;
       }
 
-      main {
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 40px 20px;
+      * {
+        box-sizing: border-box;
       }
 
-      h1 {
-        margin: 0 0 12px;
-        font-size: 32px;
-      }
-
-      p {
+      body {
+        min-height: 100vh;
         margin: 0;
-        line-height: 1.6;
+        background: #ffffff;
       }
 
-      .layout {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 20px;
-        margin-top: 28px;
-      }
-
-      section {
-        background: #fff;
-        border: 1px solid #dfe3ea;
-        border-radius: 8px;
-        padding: 20px;
-      }
-
-      h2 {
-        margin: 0 0 16px;
-        font-size: 20px;
-      }
-
-      label {
-        display: grid;
-        gap: 6px;
-        margin-bottom: 12px;
-        font-size: 14px;
-        font-weight: 700;
-      }
-
+      button,
       input {
-        min-height: 40px;
-        border: 1px solid #c9d1dc;
-        border-radius: 6px;
-        padding: 0 10px;
-        font-size: 15px;
+        font: inherit;
       }
 
       button {
-        min-height: 40px;
-        border: 0;
-        border-radius: 6px;
-        padding: 0 14px;
-        color: #fff;
-        background: #1b5e3f;
-        font-size: 15px;
-        font-weight: 700;
         cursor: pointer;
       }
 
-      button.secondary {
-        color: #1b5e3f;
-        background: #e4f1ea;
-      }
-
-      .actions {
+      .topbar {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 28px;
       }
 
-      .wide {
-        grid-column: 1 / -1;
+      .brand {
+        font-size: 15px;
+        font-weight: 700;
+        color: #3c4043;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .text-button,
+      .primary-button,
+      .ghost-button {
+        min-height: 38px;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 14px;
+        font-weight: 700;
+      }
+
+      .text-button {
+        background: transparent;
+        color: #3c4043;
+      }
+
+      .primary-button {
+        color: #ffffff;
+        background: #1a73e8;
+      }
+
+      .ghost-button {
+        color: #1a73e8;
+        background: #e8f0fe;
+      }
+
+      .home {
+        display: grid;
+        place-items: start center;
+        min-height: calc(100vh - 74px);
+        padding: 72px 20px 56px;
+      }
+
+      .search-stage {
+        width: min(720px, 100%);
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0 0 28px;
+        color: #2f3337;
+        font-size: 54px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      .search-form {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 58px;
+        border: 1px solid #dfe1e5;
+        border-radius: 30px;
+        padding: 0 10px 0 20px;
+        background: #ffffff;
+        box-shadow: 0 1px 6px rgba(32, 33, 36, 0.12);
+      }
+
+      .search-form:focus-within {
+        border-color: #c7d2fe;
+        box-shadow: 0 2px 10px rgba(32, 33, 36, 0.18);
+      }
+
+      .search-icon {
+        color: #5f6368;
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .search-form input {
+        width: 100%;
+        min-width: 0;
+        height: 48px;
+        border: 0;
+        outline: 0;
+        color: #202124;
+        font-size: 17px;
+      }
+
+      .search-form button {
+        flex: 0 0 auto;
+        min-height: 42px;
+        border: 0;
+        border-radius: 22px;
+        padding: 0 18px;
+        color: #ffffff;
+        background: #1a73e8;
+        font-weight: 700;
+      }
+
+      .status {
+        min-height: 22px;
+        margin: 16px 0 0;
+        color: #5f6368;
+        font-size: 14px;
       }
 
       .result-list {
         display: grid;
         gap: 8px;
-        margin: 12px 0 0;
+        margin: 18px 0 0;
         padding: 0;
         list-style: none;
-      }
-
-      .result-list li {
-        margin: 0;
+        text-align: left;
       }
 
       .result-button {
         display: grid;
         width: 100%;
-        min-height: 56px;
+        min-height: 64px;
         justify-items: start;
-        gap: 4px;
-        border: 1px solid #d7e0da;
-        color: #17201a;
-        background: #f8fbf9;
+        gap: 5px;
+        border: 1px solid #e0e3e7;
+        border-radius: 8px;
+        padding: 12px 16px;
+        color: #202124;
+        background: #ffffff;
         text-align: left;
       }
 
-      .result-button span,
-      .history-list span {
-        color: #5f6b7a;
-        font-size: 13px;
-        font-weight: 400;
+      .result-button:hover {
+        background: #f8fafd;
       }
 
-      .history-list {
+      .result-button strong,
+      .stock-list strong {
+        font-size: 15px;
+      }
+
+      .result-button span,
+      .stock-list span,
+      .summary-meta {
+        color: #5f6368;
+        font-size: 13px;
+      }
+
+      .dashboard {
         display: grid;
-        gap: 8px;
-        margin: 12px 0 0;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        width: min(900px, 100%);
+        margin-top: 36px;
+      }
+
+      .panel {
+        border: 1px solid #edf0f2;
+        border-radius: 8px;
+        padding: 18px;
+        background: #ffffff;
+      }
+
+      .panel h2 {
+        margin: 0 0 14px;
+        font-size: 17px;
+      }
+
+      .stock-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
         padding: 0;
         list-style: none;
       }
 
-      .history-list li {
+      .stock-list li {
         display: grid;
         gap: 4px;
-        border-bottom: 1px solid #edf0f4;
-        padding: 8px 0;
+        border-bottom: 1px solid #edf0f2;
+        padding-bottom: 10px;
       }
 
-      .status {
-        margin-top: 20px;
-        color: #445064;
+      .summary {
+        grid-column: 1 / -1;
+      }
+
+      .summary-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .summary h2 {
+        margin-bottom: 6px;
+      }
+
+      .signal-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .signal {
+        border-radius: 8px;
+        padding: 12px;
+        background: #f8fafd;
+      }
+
+      .signal strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .auth-panel {
+        position: fixed;
+        top: 70px;
+        right: 24px;
+        z-index: 10;
+        width: min(420px, calc(100vw - 32px));
+        border: 1px solid #dfe1e5;
+        border-radius: 8px;
+        padding: 18px;
+        background: #ffffff;
+        box-shadow: 0 8px 28px rgba(60, 64, 67, 0.22);
+      }
+
+      .auth-panel[hidden],
+      .summary[hidden] {
+        display: none;
+      }
+
+      .auth-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .auth-header h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .auth-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 10px;
+        color: #3c4043;
+        font-size: 13px;
         font-weight: 700;
       }
 
-      pre {
+      .auth-panel input {
+        min-height: 40px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        padding: 0 10px;
+      }
+
+      .auth-panel form button {
+        width: 100%;
+      }
+
+      .auth-user {
         overflow: auto;
-        min-height: 132px;
-        margin: 12px 0 0;
+        max-height: 120px;
+        margin: 14px 0 0;
         border-radius: 8px;
-        background: #161b22;
-        color: #e6edf3;
-        padding: 16px;
-        font-size: 13px;
+        background: #f8fafd;
+        padding: 12px;
+        color: #3c4043;
+        font-size: 12px;
+        text-align: left;
       }
 
       @media (max-width: 720px) {
-        .layout {
+        .topbar {
+          padding: 14px 16px;
+        }
+
+        .home {
+          padding-top: 44px;
+        }
+
+        h1 {
+          font-size: 38px;
+        }
+
+        .search-form {
+          min-height: 54px;
+        }
+
+        .dashboard,
+        .auth-grid,
+        .signal-row {
           grid-template-columns: 1fr;
+        }
+
+        .auth-panel {
+          top: 58px;
+          right: 16px;
+          left: 16px;
+          width: auto;
         }
       }
     </style>
   </head>
   <body>
-    <main>
-      <h1>AI 주식 분석 서비스</h1>
-      <p>Supabase Auth와 서비스 사용자 프로필 연결을 확인하는 개발용 화면입니다.</p>
-
-      <div class="layout">
-        <section>
-          <h2>회원가입</h2>
-          <form data-signup-form>
-            <label>
-              이메일
-              <input name="email" type="email" autocomplete="email" required />
-            </label>
-            <label>
-              닉네임
-              <input name="nickname" type="text" autocomplete="nickname" required />
-            </label>
-            <label>
-              비밀번호
-              <input name="password" type="password" autocomplete="new-password" minlength="6" required />
-            </label>
-            <button type="submit">회원가입</button>
-          </form>
-        </section>
-
-        <section>
-          <h2>로그인</h2>
-          <form data-login-form>
-            <label>
-              이메일
-              <input name="email" type="email" autocomplete="email" required />
-            </label>
-            <label>
-              비밀번호
-              <input name="password" type="password" autocomplete="current-password" minlength="6" required />
-            </label>
-            <div class="actions">
-              <button type="submit">로그인</button>
-              <button class="secondary" type="button" data-me-button>내 정보</button>
-              <button class="secondary" type="button" data-logout-button>로그아웃</button>
-            </div>
-          </form>
-        </section>
-
-        <section class="wide">
-          <h2>종목 검색</h2>
-          <form data-stock-search-form>
-            <label>
-              검색어
-              <input data-stock-search-input type="search" value="삼성전자" />
-            </label>
-            <button type="submit">검색</button>
-          </form>
-          <ul class="result-list" data-stock-search-results>
-            <li>검색 결과가 없습니다.</li>
-          </ul>
-        </section>
-
-        <section class="wide">
-          <h2>최근 검색 기록</h2>
-          <ul class="history-list" data-search-histories>
-            <li>로그인 후 확인할 수 있습니다.</li>
-          </ul>
-        </section>
+    <header class="topbar">
+      <div class="brand">AI 주식 분석</div>
+      <div class="top-actions">
+        <button class="text-button" type="button" data-me-button>내 정보</button>
+        <button class="ghost-button" type="button" data-auth-toggle>로그인 / 회원가입</button>
+        <button class="primary-button" type="button" data-logout-button>로그아웃</button>
       </div>
+    </header>
 
-      <p class="status" data-auth-status>로그인 전입니다.</p>
-      <pre data-auth-user>로그인된 사용자가 없습니다.</pre>
+    <aside class="auth-panel" data-auth-panel hidden>
+      <div class="auth-header">
+        <h2>계정 테스트</h2>
+        <button class="text-button" type="button" data-auth-close>닫기</button>
+      </div>
+      <div class="auth-grid">
+        <form data-login-form>
+          <label>
+            이메일
+            <input name="email" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            비밀번호
+            <input name="password" type="password" autocomplete="current-password" minlength="6" required />
+          </label>
+          <button class="primary-button" type="submit">로그인</button>
+        </form>
+
+        <form data-signup-form>
+          <label>
+            이메일
+            <input name="email" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            닉네임
+            <input name="nickname" type="text" autocomplete="nickname" required />
+          </label>
+          <label>
+            비밀번호
+            <input name="password" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+          <button class="ghost-button" type="submit">회원가입</button>
+        </form>
+      </div>
+      <pre class="auth-user" data-auth-user>로그인된 사용자가 없습니다.</pre>
+    </aside>
+
+    <main class="home">
+      <section class="search-stage">
+        <h1>Stock Signal</h1>
+        <form class="search-form" data-stock-search-form>
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input data-stock-search-input type="search" value="삼성전자" aria-label="종목 검색" />
+          <button type="submit">검색</button>
+        </form>
+        <p class="status" data-auth-status>삼성전자를 검색해 볼 수 있습니다.</p>
+        <ul class="result-list" data-stock-search-results></ul>
+      </section>
+
+      <section class="dashboard" aria-label="HOME 정보">
+        <div class="panel">
+          <h2>최근 본 종목</h2>
+          <ul class="stock-list" data-search-histories>
+            <li><span>로그인 후 확인할 수 있습니다.</span></li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <h2>인기 검색종목</h2>
+          <ul class="stock-list" data-popular-stocks>
+            <li><span>검색 기록을 집계하는 중입니다.</span></li>
+          </ul>
+        </div>
+
+        <div class="panel summary" data-summary-panel hidden>
+          <div class="summary-header">
+            <div>
+              <h2 data-summary-name>요약분석</h2>
+              <div class="summary-meta" data-summary-meta></div>
+            </div>
+            <button class="ghost-button" type="button" data-summary-close>HOME</button>
+          </div>
+          <div class="signal-row">
+            <div class="signal">
+              <strong>재무 신호</strong>
+              <span>준비 중</span>
+            </div>
+            <div class="signal">
+              <strong>위험 신호</strong>
+              <span>준비 중</span>
+            </div>
+            <div class="signal">
+              <strong>AI 설명</strong>
+              <span>준비 중</span>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
+
     <script type="module" src="./pages/auth.js"></script>
   </body>
 </html>

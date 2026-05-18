@@ -1,4 +1,4 @@
-import { searchStocks } from '../services/stockSearchService.js';
+import { getPopularStocks, searchStocks } from '../services/stockSearchService.js';
 import { createSearchHistory } from '../services/userDataService.js';
 import { requireAuthContext } from '../utils/authContext.js';
 import { readJsonBody, sendError, sendJson } from '../utils/http.js';
@@ -9,6 +9,12 @@ export async function handleStocksRoute(req, res, url) {
       const query = url.searchParams.get('q');
       const limit = url.searchParams.get('limit') || 20;
       sendJson(res, await searchStocks(query, limit));
+      return;
+    }
+
+    if (req.method === 'GET' && isPopularPath(url.pathname)) {
+      const limit = url.searchParams.get('limit') || 5;
+      sendJson(res, await getPopularStocks(limit));
       return;
     }
 
@@ -36,4 +42,8 @@ function isSearchPath(pathname) {
 
 function isSearchClickPath(pathname) {
   return pathname === '/api/stocks/search-click' || pathname === '/stocks/search-click';
+}
+
+function isPopularPath(pathname) {
+  return pathname === '/api/stocks/popular' || pathname === '/stocks/popular';
 }

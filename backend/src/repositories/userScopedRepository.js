@@ -74,6 +74,12 @@ export async function listSearchHistories(userId, limit = 20) {
   );
 }
 
+export async function listRecentSearchHistoriesForPopular(limit = 200) {
+  return requestSupabaseRest(
+    `stock_search_histories?select=${SEARCH_HISTORY_SELECT}&stock_id=not.is.null&order=searched_at.desc&limit=${Number(limit) || 200}`
+  );
+}
+
 export async function recordSearchHistory(userId, { queryText, stockId = null, resultCount = 0 }) {
   if (!queryText?.trim()) {
     throw badRequest('queryText is required.');
