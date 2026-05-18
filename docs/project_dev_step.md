@@ -665,6 +665,33 @@ data-cache
          └─ 2026-05-18-summary.json
 ```
 
+현재 완료 내용:
+
+```text
+삼성전자(005930) 기준 로컬 캐시 폴더 구조 생성 완료
+
+data-cache
+├─ dart
+│  └─ 005930
+│     ├─ 2023
+│     └─ 2024
+├─ prices
+│  └─ 005930
+├─ news
+│  └─ 005930
+└─ llm
+   └─ analysis
+      └─ 005930
+```
+
+관리 방식:
+
+```text
+실제 DART, 주가, 뉴스, LLM 캐시 파일은 Git에 올리지 않는다.
+.gitignore에서 data-cache 실제 파일은 제외하고 .gitkeep만 허용한다.
+캐시 구조 설명은 docs/cache_structure.md에 정리했다.
+```
+
 ---
 
 ## Step 5-2. 캐시 메타데이터 DB 저장
