@@ -4,6 +4,8 @@ import {
   clearAccessToken,
   createChatSession,
   getFavoriteStocks,
+  getChatMessages,
+  getChatSessions,
   getMe,
   getPopularStocks,
   getSearchHistories,
@@ -71,6 +73,10 @@ const refreshAnalysisButton = document.querySelector('[data-refresh-analysis]');
 const favoriteButton = document.querySelector('[data-favorite-button]');
 const questionForm = document.querySelector('[data-question-form]');
 const questionInput = document.querySelector('[data-question-input]');
+const questionExamplesEl = document.querySelector('[data-question-examples]');
+const chatNewButton = document.querySelector('[data-chat-new]');
+const chatSessionListEl = document.querySelector('[data-chat-session-list]');
+const chatEmptyEl = document.querySelector('[data-chat-empty]');
 const chatTranscriptEl = document.querySelector('[data-chat-transcript]');
 
 let lastSearchQuery = '';
@@ -79,6 +85,7 @@ let lastSearchResults = [];
 let selectedStock = null;
 let selectedSummary = null;
 let chatSessionId = null;
+let chatSessions = [];
 let selectedMetricCode = null;
 let favoriteStocks = [];
 
@@ -141,6 +148,7 @@ logoutButton.addEventListener('click', async () => {
     renderUser(null);
     renderSearchHistories([]);
     renderFavoriteStocks([]);
+    resetChatWorkspace();
     setStatus('로그아웃되었습니다.');
   } catch (error) {
     showError(error);
@@ -276,6 +284,29 @@ questionForm.addEventListener('submit', async (event) => {
   await askQuestion(questionInput.value);
 });
 
+questionExamplesEl.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-question-example]');
+  if (!button) {
+    return;
+  }
+
+  questionInput.value = button.dataset.questionExample;
+  questionInput.focus();
+});
+
+chatNewButton.addEventListener('click', () => {
+  startNewChat();
+});
+
+chatSessionListEl.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-chat-session-id]');
+  if (!button) {
+    return;
+  }
+
+  await loadChatSession(button.dataset.chatSessionId);
+});
+
 await initializeHome();
 
 async function initializeHome() {
@@ -323,7 +354,8 @@ async function runStockSearch(query) {
 async function handleStockSelection(stock) {
   selectedStock = stock;
   selectedSummary = null;
-  chatSessionId = null;
+  chatSessions = [];
+  startNewChat();
   selectedMetricCode = null;
   enterSummaryView(stock);
   setSummaryLoading();
@@ -331,6 +363,9 @@ async function handleStockSelection(stock) {
   const tasks = [loadStockSummary(stock.stock_id)];
   if (getStoredAccessToken()) {
     tasks.push(saveSearchSelection(stock));
+    tasks.push(loadChatSessionsForSelectedStock());
+  } else {
+    renderChatSessions([]);
   }
 
   await Promise.all(tasks);
@@ -342,6 +377,9 @@ function handleAuthResult(result, message) {
   authPanel.hidden = true;
   loadSearchHistories();
   loadFavoriteStocks().catch(showError);
+  if (selectedStock) {
+    loadChatSessionsForSelectedStock().catch(showError);
+  }
   setStatus(message);
 }
 
@@ -605,11 +643,11 @@ function closeSummary() {
   selectedStock = null;
   selectedSummary = null;
   chatSessionId = null;
+  chatSessions = [];
   document.body.classList.remove('summary-mode');
   summaryPanel.hidden = true;
   homeDashboard.hidden = false;
-  chatTranscriptEl.hidden = true;
-  chatTranscriptEl.innerHTML = '';
+  resetChatWorkspace();
   closeMetricDetail();
   window.location.hash = '';
 }
@@ -636,9 +674,16 @@ async function loadSummaryFromHash() {
   try {
     const result = await getStockDetail(match[1]);
     selectedStock = result.data;
+    chatSessions = [];
+    startNewChat();
     enterSummaryView(selectedStock);
     setSummaryLoading();
     await loadStockSummary(selectedStock.stock_id);
+    if (getStoredAccessToken()) {
+      await loadChatSessionsForSelectedStock();
+    } else {
+      renderChatSessions([]);
+    }
   } catch (error) {
     showError(error);
   }
@@ -829,6 +874,90 @@ function formatPreviousValue(metric) {
   return formatMetricValue(previous, metricUnit(metric.metric_code));
 }
 
+async function loadChatSessionsForSelectedStock() {
+  if (!selectedStock || !getStoredAccessToken()) {
+    renderChatSessions([]);
+    return;
+  }
+
+  try {
+    const result = await getChatSessions(selectedStock.stock_id);
+    chatSessions = result.data || [];
+    renderChatSessions(chatSessions);
+  } catch (error) {
+    chatSessions = [];
+    chatSessionListEl.innerHTML = '<li><span>이전 질문을 불러오지 못했습니다.</span></li>';
+    throw error;
+  }
+}
+
+function renderChatSessions(sessions) {
+  chatSessions = sessions;
+
+  if (!getStoredAccessToken()) {
+    chatSessionListEl.innerHTML = '<li><span>로그인 후 확인할 수 있습니다.</span></li>';
+    return;
+  }
+
+  if (!sessions.length) {
+    chatSessionListEl.innerHTML = '<li><span>저장된 이전 질문이 없습니다.</span></li>';
+    return;
+  }
+
+  chatSessionListEl.innerHTML = sessions.map((session) => `
+    <li>
+      <button class="chat-session-button${String(session.chat_session_id) === String(chatSessionId) ? ' active' : ''}" type="button" data-chat-session-id="${escapeHtml(session.chat_session_id)}">
+        <strong>${escapeHtml(session.title || `${selectedStock?.company_name_ko || '종목'} 재무 질문`)}</strong>
+        <span>${escapeHtml(formatDateTime(session.updated_at || session.created_at))}</span>
+      </button>
+    </li>
+  `).join('');
+}
+
+async function loadChatSession(sessionId) {
+  setStatus('이전 질문을 불러오는 중...');
+
+  try {
+    const result = await getChatMessages(sessionId);
+    chatSessionId = Number(sessionId);
+    renderChatSessions(chatSessions);
+    renderChatMessages(result.data || []);
+    setStatus('이전 질문을 불러왔습니다.');
+  } catch (error) {
+    showError(error);
+  }
+}
+
+function startNewChat() {
+  chatSessionId = null;
+  renderChatSessions(chatSessions);
+  clearChatMessages('새 질문을 입력하면 종목별 대화가 저장됩니다.');
+  questionInput.value = '';
+}
+
+function resetChatWorkspace() {
+  chatSessionId = null;
+  chatSessions = [];
+  renderChatSessions([]);
+  clearChatMessages('질문 예시를 선택하거나 직접 질문을 입력하세요.');
+  questionInput.value = '';
+}
+
+function clearChatMessages(emptyMessage) {
+  chatTranscriptEl.hidden = true;
+  chatTranscriptEl.innerHTML = '';
+  chatEmptyEl.hidden = false;
+  chatEmptyEl.textContent = emptyMessage;
+}
+
+function renderChatMessages(messages) {
+  clearChatMessages('저장된 메시지가 없습니다. 새 질문을 입력하세요.');
+
+  for (const message of messages) {
+    renderChatMessage(message.role, message.message_text, message.created_at);
+  }
+}
+
 async function askQuestion(rawQuestion) {
   const question = rawQuestion.trim();
   if (!question || !selectedStock) {
@@ -858,6 +987,7 @@ async function askQuestion(rawQuestion) {
 
     const result = await sendChatMessage(chatSessionId, question);
     renderChatMessage('assistant', result.data.assistantMessage.message_text);
+    await loadChatSessionsForSelectedStock();
     setStatus('AI 답변을 저장했습니다.');
   } catch (error) {
     showError(error);
@@ -867,11 +997,17 @@ async function askQuestion(rawQuestion) {
   }
 }
 
-function renderChatMessage(role, message) {
+function renderChatMessage(role, message, createdAt = null) {
+  chatEmptyEl.hidden = true;
   chatTranscriptEl.hidden = false;
   chatTranscriptEl.insertAdjacentHTML('beforeend', `
-    <div class="chat-message ${escapeHtml(role)}">${escapeHtml(message)}</div>
+    <div class="chat-message ${escapeHtml(role)}">
+      <strong>${role === 'assistant' ? 'AI 답변' : '내 질문'}</strong>
+      <p>${escapeHtml(message)}</p>
+      ${createdAt ? `<span>${escapeHtml(formatDateTime(createdAt))}</span>` : ''}
+    </div>
   `);
+  chatTranscriptEl.scrollTop = chatTranscriptEl.scrollHeight;
 }
 
 function setStatus(message) {
@@ -911,6 +1047,24 @@ function formatDate(value) {
   }
 
   return `${date.toLocaleDateString('ko-KR')} 추가`;
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return '-';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  return date.toLocaleString('ko-KR', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 function formatMetricValue(value, unit) {

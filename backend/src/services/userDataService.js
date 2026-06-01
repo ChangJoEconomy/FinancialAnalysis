@@ -43,8 +43,8 @@ export async function createSearchHistory(authContext, payload) {
   return recordSearchHistory(authContext.userId, payload);
 }
 
-export async function getChatSessions(authContext, limit) {
-  return listChatSessions(authContext.userId, limit);
+export async function getChatSessions(authContext, limit, stockId) {
+  return listChatSessions(authContext.userId, limit, stockId);
 }
 
 export async function getChatMessages(authContext, chatSessionId) {

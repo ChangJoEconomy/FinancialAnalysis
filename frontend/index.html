@@ -664,9 +664,7 @@
       .question-form {
         display: flex;
         gap: 8px;
-        border-top: 1px solid #e8eaed;
-        margin-top: 24px;
-        padding-top: 24px;
+        margin-top: 14px;
       }
 
       .question-form button {
@@ -685,7 +683,106 @@
       .chat-transcript {
         display: grid;
         gap: 8px;
+        max-height: 420px;
         margin-top: 14px;
+        overflow-y: auto;
+      }
+
+      .question-examples {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .example-button {
+        min-height: 34px;
+        border: 1px solid #dadce0;
+        border-radius: 18px;
+        padding: 0 12px;
+        color: #3c4043;
+        background: #ffffff;
+        font-size: 13px;
+      }
+
+      .example-button:hover {
+        border-color: #1a73e8;
+        color: #1a73e8;
+        background: #f8fafd;
+      }
+
+      .chat-workspace {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 18px;
+        border-top: 1px solid #e8eaed;
+        margin-top: 18px;
+        padding-top: 18px;
+      }
+
+      .chat-session-panel {
+        border-right: 1px solid #e8eaed;
+        padding-right: 18px;
+      }
+
+      .chat-session-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .chat-session-header h4 {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .chat-session-list {
+        display: grid;
+        gap: 6px;
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .chat-session-button {
+        display: grid;
+        width: 100%;
+        gap: 4px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 9px;
+        color: #3c4043;
+        background: #ffffff;
+        text-align: left;
+      }
+
+      .chat-session-button:hover,
+      .chat-session-button.active {
+        border-color: #d2e3fc;
+        background: #f8fafd;
+      }
+
+      .chat-session-button strong {
+        overflow: hidden;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .chat-session-button span,
+      .chat-empty {
+        color: #5f6368;
+        font-size: 12px;
+      }
+
+      .chat-conversation {
+        min-width: 0;
+      }
+
+      .chat-empty {
+        margin: 0;
+        line-height: 1.6;
       }
 
       .chat-message {
@@ -693,6 +790,23 @@
         padding: 12px;
         font-size: 14px;
         line-height: 1.6;
+      }
+
+      .chat-message strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+      }
+
+      .chat-message p {
+        margin: 0;
+      }
+
+      .chat-message span {
+        display: block;
+        margin-top: 5px;
+        color: #5f6368;
+        font-size: 11px;
       }
 
       .chat-message.user {
@@ -867,6 +981,20 @@
 
         .question-form {
           display: grid;
+        }
+
+        .chat-workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .chat-session-panel {
+          border-right: 0;
+          border-bottom: 1px solid #e8eaed;
+          padding: 0 0 14px;
+        }
+
+        .chat-session-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .favorite-item-header,
@@ -1067,11 +1195,31 @@
               <h3>AI에게 추가 질문</h3>
               <span>재무 분석 결과를 바탕으로 답변합니다.</span>
             </div>
-            <form class="question-form" data-question-form>
-              <input data-question-input type="text" placeholder="예: 이 회사에서 가장 먼저 확인할 점은 뭐야?" />
-              <button class="primary-button" type="submit">질문 보내기</button>
-            </form>
-            <div class="chat-transcript" data-chat-transcript hidden></div>
+            <div class="question-examples" data-question-examples aria-label="질문 예시">
+              <button class="example-button" type="button" data-question-example="이 회사 위험해?">이 회사 위험해?</button>
+              <button class="example-button" type="button" data-question-example="PER이 높으면 안 좋은 거야?">PER이 높으면 안 좋은 거야?</button>
+              <button class="example-button" type="button" data-question-example="부채비율은 괜찮은 편이야?">부채비율은 괜찮은 편이야?</button>
+              <button class="example-button" type="button" data-question-example="영업이익률이 낮으면 무슨 뜻이야?">영업이익률이 낮으면 무슨 뜻이야?</button>
+            </div>
+            <div class="chat-workspace">
+              <aside class="chat-session-panel" aria-label="이전 질문">
+                <div class="chat-session-header">
+                  <h4>이전 질문</h4>
+                  <button class="text-button" type="button" data-chat-new>새 대화</button>
+                </div>
+                <ul class="chat-session-list" data-chat-session-list>
+                  <li><span>로그인 후 확인할 수 있습니다.</span></li>
+                </ul>
+              </aside>
+              <div class="chat-conversation">
+                <p class="chat-empty" data-chat-empty>질문 예시를 선택하거나 직접 질문을 입력하세요.</p>
+                <div class="chat-transcript" data-chat-transcript hidden></div>
+                <form class="question-form" data-question-form>
+                  <input data-question-input type="text" maxlength="1000" placeholder="예: 이 회사에서 가장 먼저 확인할 점은 뭐야?" />
+                  <button class="primary-button" type="submit">질문 보내기</button>
+                </form>
+              </div>
+            </div>
           </section>
         </div>
       </section>

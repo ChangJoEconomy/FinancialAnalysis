@@ -122,6 +122,12 @@ growth: 성장성 중심
 
 현재 로그인 사용자의 AI 채팅 세션만 조회한다.
 
+특정 종목의 이전 질문만 조회할 수 있다.
+
+```http
+GET /api/me/chat-sessions?stockId=1&limit=20
+```
+
 ## POST /api/me/chat-sessions
 
 종목별 AI 질문 세션을 생성한다.
@@ -149,3 +155,16 @@ growth: 성장성 중심
 ```
 
 Gemini 호출에 실패하면 최신 규칙 기반 재무 설명으로 fallback 답변을 저장한다.
+
+Gemini context에는 다음 정보를 포함한다.
+
+```text
+종목 정보
+최신 종합 분석 결과
+사용자 분석 설정과 가중치
+지표별 값, 신호, 판단 이유
+metric_definitions 초보자 설명
+최근 대화 메시지
+```
+
+직접적인 매수, 매도, 보유 지시가 포함된 답변은 안전한 fallback 답변으로 대체한다.

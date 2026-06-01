@@ -203,6 +203,20 @@ export async function listMetricAnalysisItems(analysisId) {
   );
 }
 
+export async function listMetricDefinitions(metricCodes = []) {
+  if (!metricCodes.length) {
+    return [];
+  }
+
+  const encodedMetricCodes = metricCodes.map((metricCode) => encodeURIComponent(metricCode)).join(',');
+  return requestSupabaseRest(
+    'metric_definitions?' +
+      'select=metric_code,metric_name_ko,description_beginner,formula_text,unit,good_direction,category' +
+      `&metric_code=in.(${encodedMetricCodes})` +
+      '&is_active=eq.true'
+  );
+}
+
 export async function listAnalysisEvidences(analysisId) {
   return requestSupabaseRest(
     `ai_analysis_evidences?select=${EVIDENCE_SELECT}` +

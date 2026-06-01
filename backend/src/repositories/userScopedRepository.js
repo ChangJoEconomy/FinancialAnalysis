@@ -198,21 +198,26 @@ export async function recordSearchHistory(userId, { queryText, stockId = null, r
   return rows[0];
 }
 
-export async function listChatSessions(userId, limit = 20) {
+export async function listChatSessions(userId, limit = 20, stockId = null) {
+  const normalizedStockId = normalizeOptionalPositiveInteger(stockId, 'stockId');
+  const stockFilter = normalizedStockId ? `&stock_id=eq.${normalizedStockId}` : '';
   return requestSupabaseRest(
-    `ai_chat_sessions?select=${CHAT_SESSION_SELECT}&user_id=eq.${userId}&order=updated_at.desc&limit=${Number(limit) || 20}`
+    `ai_chat_sessions?select=${CHAT_SESSION_SELECT}&user_id=eq.${userId}${stockFilter}&order=updated_at.desc&limit=${normalizeLimit(limit)}`
   );
 }
 
 export async function createChatSession(userId, { stockId = null, settingId = null, title = null }) {
+  const normalizedStockId = normalizeOptionalPositiveInteger(stockId, 'stockId');
+  const normalizedSettingId = normalizeOptionalPositiveInteger(settingId, 'settingId');
+  const normalizedTitle = normalizeOptionalTitle(title);
   const rows = await requestSupabaseRest('ai_chat_sessions', {
     method: 'POST',
     prefer: 'return=representation',
     body: {
       user_id: Number(userId),
-      stock_id: stockId ? Number(stockId) : null,
-      setting_id: settingId ? Number(settingId) : null,
-      title: title?.trim() || null
+      stock_id: normalizedStockId,
+      setting_id: normalizedSettingId,
+      title: normalizedTitle
     }
   });
 
@@ -220,9 +225,10 @@ export async function createChatSession(userId, { stockId = null, settingId = nu
 }
 
 export async function findOwnedChatSession(userId, chatSessionId) {
+  const normalizedChatSessionId = normalizePositiveInteger(chatSessionId, 'chatSessionId');
   const rows = await requestSupabaseRest(
     `ai_chat_sessions?select=${CHAT_SESSION_SELECT}` +
-      `&chat_session_id=eq.${Number(chatSessionId)}` +
+      `&chat_session_id=eq.${normalizedChatSessionId}` +
       `&user_id=eq.${Number(userId)}` +
       '&limit=1'
   );
@@ -231,12 +237,10 @@ export async function findOwnedChatSession(userId, chatSessionId) {
 }
 
 export async function listChatMessagesForOwnedSession(userId, chatSessionId) {
-  if (!chatSessionId) {
-    throw badRequest('chatSessionId is required.');
-  }
+  const normalizedChatSessionId = normalizePositiveInteger(chatSessionId, 'chatSessionId');
 
   const sessions = await requestSupabaseRest(
-    `ai_chat_sessions?select=chat_session_id&chat_session_id=eq.${chatSessionId}&user_id=eq.${userId}&limit=1`
+    `ai_chat_sessions?select=chat_session_id&chat_session_id=eq.${normalizedChatSessionId}&user_id=eq.${userId}&limit=1`
   );
 
   if (!sessions.length) {
@@ -244,7 +248,7 @@ export async function listChatMessagesForOwnedSession(userId, chatSessionId) {
   }
 
   return requestSupabaseRest(
-    `ai_chat_messages?select=message_id,chat_session_id,role,message_text,related_analysis_id,token_count,created_at&chat_session_id=eq.${chatSessionId}&order=created_at.asc`
+    `ai_chat_messages?select=message_id,chat_session_id,role,message_text,related_analysis_id,token_count,created_at&chat_session_id=eq.${normalizedChatSessionId}&order=created_at.asc`
   );
 }
 
@@ -271,7 +275,8 @@ export async function createChatMessage({
 }
 
 export async function touchChatSession(chatSessionId) {
-  const rows = await requestSupabaseRest(`ai_chat_sessions?chat_session_id=eq.${Number(chatSessionId)}`, {
+  const normalizedChatSessionId = normalizePositiveInteger(chatSessionId, 'chatSessionId');
+  const rows = await requestSupabaseRest(`ai_chat_sessions?chat_session_id=eq.${normalizedChatSessionId}`, {
     method: 'PATCH',
     prefer: 'return=representation',
     body: {
@@ -280,6 +285,48 @@ export async function touchChatSession(chatSessionId) {
   });
 
   return rows[0];
+}
+
+function normalizeLimit(limit) {
+  const normalizedLimit = Number(limit);
+  if (!Number.isInteger(normalizedLimit) || normalizedLimit <= 0) {
+    return 20;
+  }
+
+  return Math.min(normalizedLimit, 100);
+}
+
+function normalizeOptionalTitle(title) {
+  if (title === undefined || title === null || title === '') {
+    return null;
+  }
+
+  if (typeof title !== 'string') {
+    throw badRequest('title must be a string.');
+  }
+
+  if (title.trim().length > 200) {
+    throw badRequest('title must be 200 characters or fewer.');
+  }
+
+  return title.trim() || null;
+}
+
+function normalizePositiveInteger(value, fieldName) {
+  const normalizedValue = Number(value);
+  if (!Number.isInteger(normalizedValue) || normalizedValue <= 0) {
+    throw badRequest(`${fieldName} must be a positive integer.`);
+  }
+
+  return normalizedValue;
+}
+
+function normalizeOptionalPositiveInteger(value, fieldName) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  return normalizePositiveInteger(value, fieldName);
 }
 
 function badRequest(message) {

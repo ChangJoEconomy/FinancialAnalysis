@@ -158,6 +158,18 @@ export async function createChatSession(payload = {}) {
   });
 }
 
+export async function getChatSessions(stockId = null) {
+  const params = new URLSearchParams({ limit: '20' });
+  if (stockId) {
+    params.set('stockId', String(stockId));
+  }
+
+  return request(`/api/me/chat-sessions?${params.toString()}`, {
+    method: 'GET',
+    accessToken: getStoredAccessToken()
+  });
+}
+
 export async function sendChatMessage(chatSessionId, message) {
   return request(`/api/me/chat-sessions/${chatSessionId}/messages`, {
     method: 'POST',

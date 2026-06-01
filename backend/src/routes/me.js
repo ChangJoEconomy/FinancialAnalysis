@@ -65,7 +65,13 @@ export async function handleMeRoute(req, res, url) {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/me/chat-sessions') {
-      sendJson(res, { data: await getChatSessions(authContext, url.searchParams.get('limit')) });
+      sendJson(res, {
+        data: await getChatSessions(
+          authContext,
+          url.searchParams.get('limit'),
+          url.searchParams.get('stockId')
+        )
+      });
       return;
     }
 
