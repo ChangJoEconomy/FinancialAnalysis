@@ -62,6 +62,34 @@ export async function getPopularStocks() {
   });
 }
 
+export async function getStockDetail(stockId) {
+  return request(`/api/stocks/${stockId}`, {
+    method: 'GET'
+  });
+}
+
+export async function getStockSummary(stockId) {
+  return request(`/api/stocks/${stockId}/summary`, {
+    method: 'GET',
+    accessToken: getStoredAccessToken()
+  });
+}
+
+export async function analyzeStock(stockId, payload = {}) {
+  return request(`/api/stocks/${stockId}/analyze`, {
+    method: 'POST',
+    body: payload,
+    accessToken: getStoredAccessToken()
+  });
+}
+
+export async function getStockFinancials(stockId, fiscalYear = 2024) {
+  const params = new URLSearchParams({ fiscalYear: String(fiscalYear) });
+  return request(`/api/stocks/${stockId}/financials?${params.toString()}`, {
+    method: 'GET'
+  });
+}
+
 export async function recordStockSearchClick(payload) {
   return request('/api/stocks/search-click', {
     method: 'POST',
@@ -88,6 +116,29 @@ export async function updateAnalysisSettings(payload) {
   return request('/api/me/analysis-settings', {
     method: 'PUT',
     body: payload,
+    accessToken: getStoredAccessToken()
+  });
+}
+
+export async function createChatSession(payload = {}) {
+  return request('/api/me/chat-sessions', {
+    method: 'POST',
+    body: payload,
+    accessToken: getStoredAccessToken()
+  });
+}
+
+export async function sendChatMessage(chatSessionId, message) {
+  return request(`/api/me/chat-sessions/${chatSessionId}/messages`, {
+    method: 'POST',
+    body: { message },
+    accessToken: getStoredAccessToken()
+  });
+}
+
+export async function getChatMessages(chatSessionId) {
+  return request(`/api/me/chat-sessions/${chatSessionId}/messages`, {
+    method: 'GET',
     accessToken: getStoredAccessToken()
   });
 }

@@ -102,3 +102,62 @@ GET /api/stocks/popular?limit=5
   }
 ]
 ```
+
+## GET /api/stocks/:stockId
+
+종목 기본 정보를 조회한다.
+
+```http
+GET /api/stocks/1
+```
+
+## GET /api/stocks/:stockId/summary
+
+최신 Gemini 재무 설명, 신호등, 지표별 분석 근거를 조회한다.
+
+로그인 토큰이 있으면 사용자의 기본 분석 설정 결과를 먼저 조회하고, 아직 개인화 분석 결과가 없으면 공개 기본 분석 결과를 반환한다.
+
+```http
+GET /api/stocks/1/summary
+```
+
+## POST /api/stocks/:stockId/analyze
+
+종목 분석을 실행한다.
+
+```http
+POST /api/stocks/1/analyze
+Content-Type: application/json
+
+{
+  "fiscalYear": 2024
+}
+```
+
+처리 흐름:
+
+```text
+1. 최신 LLM 설명 캐시가 유효하면 cached=true로 즉시 반환한다.
+2. 캐시가 없거나 forceRefresh=true이면 재무 지표를 준비한다.
+3. 규칙 기반 신호등 분석을 실행한다.
+4. Gemini 초보자용 설명을 생성한다.
+5. 분석 run, 지표별 설명, 근거 데이터를 저장한다.
+```
+
+로그인 사용자는 본인 소유 `settingId`를 지정할 수 있다.
+
+```json
+{
+  "fiscalYear": 2024,
+  "settingId": 2,
+  "forceRefresh": true
+}
+```
+
+## GET /api/stocks/:stockId/financials
+
+재무제표 스냅샷, 주요 계정 항목, 계산된 지표를 조회한다.
+
+```http
+GET /api/stocks/1/financials?fiscalYear=2024
+```

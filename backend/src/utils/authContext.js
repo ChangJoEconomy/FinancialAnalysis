@@ -19,6 +19,14 @@ export async function requireAuthContext(req) {
   };
 }
 
+export async function getOptionalAuthContext(req) {
+  if (!getBearerToken(req)) {
+    return null;
+  }
+
+  return requireAuthContext(req);
+}
+
 export function getBearerToken(req) {
   const authorization = req.headers.authorization || '';
   const [scheme, token] = authorization.split(' ');

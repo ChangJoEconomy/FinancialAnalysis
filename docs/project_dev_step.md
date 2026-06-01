@@ -1,6 +1,6 @@
 # AI 주식 분석 서비스 프로젝트 진행 단계
 
-> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료 + 종목 검색 API 구현 완료 + 검색 기록 저장 구현 완료 + HOME 화면 구현 완료 + 삼성전자 재무제표 스냅샷/주요 항목/지표값 저장 완료 + 규칙 기반 신호등/LLM 설명 생성 완료 + 사용자 분석 설정 구현 완료**  
+> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료 + 종목 검색 API 구현 완료 + 검색 기록 저장 구현 완료 + HOME 화면 구현 완료 + 삼성전자 재무제표 스냅샷/주요 항목/지표값 저장 완료**  
 > 다음 목표: **종목 검색 → 재무 데이터 수집 → 지표 계산 → AI 신호등 분석 → 화면 표시**까지 MVP 흐름 완성
 
 ---
@@ -1483,66 +1483,6 @@ overall_score =
 선택한 설정에 따라 종합 신호와 설명이 달라질 수 있다.
 ```
 
-현재 완료 내용:
-
-```text
-backend
-- 사용자별 분석 설정 repository 구현
-- 기본 프리셋 3개 자동 생성 구현
-  - conservative: 안정성 중심
-  - balanced: 균형 분석
-  - growth: 성장성 중심
-- GET /api/me/analysis-settings 구현
-- PUT /api/me/analysis-settings 구현
-- 선택 설정의 setting_id를 ai_analysis_runs.setting_id에 연결
-- 설정별 가중치를 규칙 기반 종합 점수 계산에 반영
-- 설정이 없는 기존 worker는 기존 평균 점수 방식 유지
-
-frontend
-- getAnalysisSettings API helper 추가
-- updateAnalysisSettings API helper 추가
-
-docs
-- docs/api/user-scoped-data.md에 분석 설정 API 추가
-```
-
-검증 방법:
-
-```bash
-cd backend
-npm run analysis:traffic-light:samsung
-```
-
-로그인 토큰이 있을 때:
-
-```bash
-curl -H "Authorization: Bearer <accessToken>" \
-  http://127.0.0.1:4000/api/me/analysis-settings
-
-curl -X PUT \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <accessToken>" \
-  -d '{"riskType":"growth"}' \
-  http://127.0.0.1:4000/api/me/analysis-settings
-```
-
-검증 결과:
-
-```text
-기존 삼성전자 규칙 기반 분석 worker 회귀 확인
-- analysis_id=1 유지
-- source_data_hash 기존 값 유지
-- setting_id=null일 때 기존 평균 점수 방식 유지
-
-사용자 1번 기준 기본 프리셋 생성 확인
-- settingsCount: 3
-- defaultRiskType: balanced
-
-기본 설정 변경 확인
-- growth로 변경 성공
-- balanced로 복구 성공
-```
-
 ---
 
 # Phase 11. 백엔드 API 구현
@@ -1559,8 +1499,8 @@ curl -X PUT \
 | POST /favorites | 관심종목 추가 |
 | GET /favorites | 관심종목 목록 |
 | DELETE /favorites/:favoriteId | 관심종목 삭제 |
-| GET /api/me/analysis-settings | 사용자 분석 설정 조회 |
-| PUT /api/me/analysis-settings | 사용자 분석 설정 수정 |
+| GET /settings/analysis | 사용자 분석 설정 조회 |
+| PUT /settings/analysis | 사용자 분석 설정 수정 |
 | POST /chat/sessions | AI 질문 세션 생성 |
 | POST /chat/sessions/:id/messages | AI 질문 전송 |
 
@@ -2071,7 +2011,6 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] 재무 지표 계산 서비스
 - [x] 신호등 분석 서비스
 - [x] LLM 설명 생성 서비스
-- [x] 사용자 분석 설정 API
 - [ ] 요약분석 조회 API
 - [ ] 재무상세 조회 API
 - [x] 관심종목 API (사용자별 기본 데이터 보호 기준)
@@ -2113,16 +2052,16 @@ AI가 매수/매도를 대신하지 않는다.
 
 # 바로 다음 작업
 
-현재 상태에서 가장 먼저 해야 할 일은 **Phase 11. 백엔드 API 구현**이다.
+현재 상태에서 가장 먼저 해야 할 일은 **Phase 10. 사용자 분석 설정 구현**이다.
 
 바로 다음 순서:
 
 ```text
-1. GET /api/stocks/:stockId/summary 구현
-2. POST /api/stocks/:stockId/analyze 구현
-3. 분석 실행 API에서 재무 수집 → 지표 계산 → 신호등 분석 → LLM 설명 생성 연결
-4. 최신 분석 결과 캐시 반환 로직 구현
-5. 이후 요약분석 화면과 주요 지표 카드 UI로 연결
+1. user_analysis_settings 기본 프리셋 구조 확인
+2. 보수적/균형/성장성 설정 생성 또는 조회 로직 구현
+3. 설정별 가중치를 종합 점수 계산에 반영
+4. 선택한 설정이 ai_analysis_runs.setting_id에 남도록 연결
+5. 이후 요약분석 조회 API와 화면 표시로 연결
 ```
 
 이 단계가 끝나면 다음으로 요약분석 화면과 주요 지표 카드 UI를 연결한다.

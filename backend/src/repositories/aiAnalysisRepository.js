@@ -59,12 +59,21 @@ export async function findAnalysisRunBySource({ stockId, analysisType, sourceDat
   return rows[0] || null;
 }
 
-export async function findLatestAnalysisRun({ stockId, analysisType, promptVersion }) {
+export async function findLatestAnalysisRun({ stockId, analysisType, promptVersion, settingId = null, freshOnly = false }) {
+  const settingFilter = settingId
+    ? `&setting_id=eq.${Number(settingId)}`
+    : '&setting_id=is.null';
+  const expiresFilter = freshOnly
+    ? `&or=${encodeURIComponent(`(expires_at.is.null,expires_at.gt.${new Date().toISOString()})`)}`
+    : '';
+
   const rows = await requestSupabaseRest(
     `ai_analysis_runs?select=${ANALYSIS_RUN_SELECT}` +
       `&stock_id=eq.${Number(stockId)}` +
       `&analysis_type=eq.${encodeURIComponent(analysisType)}` +
       `&prompt_version=eq.${encodeURIComponent(promptVersion)}` +
+      settingFilter +
+      expiresFilter +
       '&order=created_at.desc' +
       '&limit=1'
   );

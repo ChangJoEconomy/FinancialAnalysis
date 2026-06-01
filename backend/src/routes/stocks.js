@@ -1,6 +1,12 @@
 import { getPopularStocks, searchStocks } from '../services/stockSearchService.js';
+import {
+  analyzeStock,
+  getStockDetail,
+  getStockFinancials,
+  getStockSummary
+} from '../services/stockAnalysisService.js';
 import { createSearchHistory } from '../services/userDataService.js';
-import { requireAuthContext } from '../utils/authContext.js';
+import { getOptionalAuthContext, requireAuthContext } from '../utils/authContext.js';
 import { readJsonBody, sendError, sendJson } from '../utils/http.js';
 
 export async function handleStocksRoute(req, res, url) {
@@ -25,6 +31,39 @@ export async function handleStocksRoute(req, res, url) {
       return;
     }
 
+    const stockPath = matchStockPath(url.pathname);
+    if (stockPath) {
+      const { stockId, resource } = stockPath;
+
+      if (req.method === 'GET' && !resource) {
+        sendJson(res, { data: await getStockDetail(stockId) });
+        return;
+      }
+
+      if (req.method === 'GET' && resource === 'summary') {
+        const authContext = await getOptionalAuthContext(req);
+        sendJson(res, { data: await getStockSummary({ stockId, authContext }) });
+        return;
+      }
+
+      if (req.method === 'POST' && resource === 'analyze') {
+        const authContext = await getOptionalAuthContext(req);
+        const body = await readJsonBody(req);
+        sendJson(res, { data: await analyzeStock({ stockId, authContext, payload: body }) });
+        return;
+      }
+
+      if (req.method === 'GET' && resource === 'financials') {
+        sendJson(res, {
+          data: await getStockFinancials({
+            stockId,
+            fiscalYear: url.searchParams.get('fiscalYear') || 2024
+          })
+        });
+        return;
+      }
+    }
+
     sendError(res, 404, 'NOT_FOUND', 'Unknown stocks endpoint.');
   } catch (error) {
     sendError(
@@ -34,6 +73,18 @@ export async function handleStocksRoute(req, res, url) {
       error.message
     );
   }
+}
+
+function matchStockPath(pathname) {
+  const match = pathname.match(/^\/(?:api\/)?stocks\/(\d+)(?:\/(summary|analyze|financials))?$/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    stockId: Number(match[1]),
+    resource: match[2] || null
+  };
 }
 
 function isSearchPath(pathname) {

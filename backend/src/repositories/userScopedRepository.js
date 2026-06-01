@@ -113,6 +113,32 @@ export async function listChatSessions(userId, limit = 20) {
   );
 }
 
+export async function createChatSession(userId, { stockId = null, settingId = null, title = null }) {
+  const rows = await requestSupabaseRest('ai_chat_sessions', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      user_id: Number(userId),
+      stock_id: stockId ? Number(stockId) : null,
+      setting_id: settingId ? Number(settingId) : null,
+      title: title?.trim() || null
+    }
+  });
+
+  return rows[0];
+}
+
+export async function findOwnedChatSession(userId, chatSessionId) {
+  const rows = await requestSupabaseRest(
+    `ai_chat_sessions?select=${CHAT_SESSION_SELECT}` +
+      `&chat_session_id=eq.${Number(chatSessionId)}` +
+      `&user_id=eq.${Number(userId)}` +
+      '&limit=1'
+  );
+
+  return rows[0] || null;
+}
+
 export async function listChatMessagesForOwnedSession(userId, chatSessionId) {
   if (!chatSessionId) {
     throw badRequest('chatSessionId is required.');
@@ -129,6 +155,40 @@ export async function listChatMessagesForOwnedSession(userId, chatSessionId) {
   return requestSupabaseRest(
     `ai_chat_messages?select=message_id,chat_session_id,role,message_text,related_analysis_id,token_count,created_at&chat_session_id=eq.${chatSessionId}&order=created_at.asc`
   );
+}
+
+export async function createChatMessage({
+  chatSessionId,
+  role,
+  messageText,
+  relatedAnalysisId = null,
+  tokenCount = null
+}) {
+  const rows = await requestSupabaseRest('ai_chat_messages', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      chat_session_id: Number(chatSessionId),
+      role,
+      message_text: messageText,
+      related_analysis_id: relatedAnalysisId ? Number(relatedAnalysisId) : null,
+      token_count: tokenCount === null ? null : Number(tokenCount)
+    }
+  });
+
+  return rows[0];
+}
+
+export async function touchChatSession(chatSessionId) {
+  const rows = await requestSupabaseRest(`ai_chat_sessions?chat_session_id=eq.${Number(chatSessionId)}`, {
+    method: 'PATCH',
+    prefer: 'return=representation',
+    body: {
+      updated_at: new Date().toISOString()
+    }
+  });
+
+  return rows[0];
 }
 
 function badRequest(message) {

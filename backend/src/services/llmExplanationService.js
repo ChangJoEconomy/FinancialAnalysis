@@ -42,7 +42,7 @@ export async function generateAndSaveFinancialLlmExplanation({
   const analysisRun = await upsertAnalysisRun({
     user_id: userId,
     stock_id: stockId,
-    setting_id: null,
+    setting_id: ruleResult.analysis.setting_id,
     analysis_type: ANALYSIS_TYPE,
     overall_signal: ruleResult.analysis.overall_signal,
     overall_score: Number(ruleResult.analysis.overall_score),

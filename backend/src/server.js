@@ -56,7 +56,11 @@ const server = createServer(async (req, res) => {
         '/api/me/analysis-settings',
         '/api/me/chat-sessions',
         '/api/stocks/search?q=삼성전자',
-        '/api/stocks/popular'
+        '/api/stocks/popular',
+        '/api/stocks/1',
+        '/api/stocks/1/summary',
+        '/api/stocks/1/analyze',
+        '/api/stocks/1/financials?fiscalYear=2024'
       ]
     });
     return;

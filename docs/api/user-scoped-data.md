@@ -109,6 +109,30 @@ growth: 성장성 중심
 
 현재 로그인 사용자의 AI 채팅 세션만 조회한다.
 
+## POST /api/me/chat-sessions
+
+종목별 AI 질문 세션을 생성한다.
+
+```json
+{
+  "stockId": 1,
+  "settingId": 2,
+  "title": "삼성전자 재무 질문"
+}
+```
+
 ## GET /api/me/chat-sessions/:chatSessionId/messages
 
 먼저 `ai_chat_sessions.chat_session_id`와 로그인 사용자의 `user_id` 소유권을 확인한 뒤 메시지를 조회한다.
+
+## POST /api/me/chat-sessions/:chatSessionId/messages
+
+최신 재무 분석 결과를 근거로 Gemini에 추가 질문을 전달하고 사용자 질문과 AI 답변을 저장한다.
+
+```json
+{
+  "message": "이 회사의 재무 상태에서 가장 먼저 확인할 점은 뭐야?"
+}
+```
+
+Gemini 호출에 실패하면 최신 규칙 기반 재무 설명으로 fallback 답변을 저장한다.

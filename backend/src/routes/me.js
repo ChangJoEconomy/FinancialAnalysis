@@ -9,6 +9,7 @@ import {
   getAnalysisSettings,
   updateAnalysisSettings
 } from '../services/userDataService.js';
+import { sendChatMessage, startChatSession } from '../services/chatService.js';
 import { requireAuthContext } from '../utils/authContext.js';
 import { readJsonBody, sendError, sendJson } from '../utils/http.js';
 
@@ -60,11 +61,23 @@ export async function handleMeRoute(req, res, url) {
       return;
     }
 
-    if (req.method === 'GET' && url.pathname.startsWith('/api/me/chat-sessions/')) {
+    if (req.method === 'POST' && url.pathname === '/api/me/chat-sessions') {
+      const body = await readJsonBody(req);
+      sendJson(res, { data: await startChatSession(authContext, body) }, 201);
+      return;
+    }
+
+    if (url.pathname.startsWith('/api/me/chat-sessions/')) {
       const [, , , , chatSessionId, childResource] = url.pathname.split('/');
 
-      if (childResource === 'messages') {
+      if (req.method === 'GET' && childResource === 'messages') {
         sendJson(res, { data: await getChatMessages(authContext, chatSessionId) });
+        return;
+      }
+
+      if (req.method === 'POST' && childResource === 'messages') {
+        const body = await readJsonBody(req);
+        sendJson(res, { data: await sendChatMessage(authContext, chatSessionId, body) }, 201);
         return;
       }
     }
