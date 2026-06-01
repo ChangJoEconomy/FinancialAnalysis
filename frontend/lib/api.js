@@ -113,6 +113,28 @@ export async function addFavoriteStock(payload) {
   });
 }
 
+export async function getFavoriteStocks() {
+  return request('/api/me/favorite-stocks', {
+    method: 'GET',
+    accessToken: getStoredAccessToken()
+  });
+}
+
+export async function updateFavoriteStock(favoriteId, payload) {
+  return request(`/api/me/favorite-stocks/${favoriteId}`, {
+    method: 'PATCH',
+    body: payload,
+    accessToken: getStoredAccessToken()
+  });
+}
+
+export async function removeFavoriteStock(favoriteId) {
+  return request(`/api/me/favorite-stocks/${favoriteId}`, {
+    method: 'DELETE',
+    accessToken: getStoredAccessToken()
+  });
+}
+
 export async function getAnalysisSettings() {
   return request('/api/me/analysis-settings', {
     method: 'GET',

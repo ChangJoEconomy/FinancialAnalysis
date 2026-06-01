@@ -5,7 +5,8 @@ import {
   listFavoriteStocks,
   listSearchHistories,
   recordSearchHistory,
-  removeFavoriteStock
+  removeFavoriteStock,
+  updateFavoriteStock
 } from '../repositories/userScopedRepository.js';
 import {
   ANALYSIS_PRESETS,
@@ -28,6 +29,10 @@ export async function createFavoriteStock(authContext, payload) {
 
 export async function deleteFavoriteStock(authContext, favoriteId) {
   return removeFavoriteStock(authContext.userId, favoriteId);
+}
+
+export async function patchFavoriteStock(authContext, favoriteId, payload) {
+  return updateFavoriteStock(authContext.userId, favoriteId, payload);
 }
 
 export async function getSearchHistories(authContext, limit) {

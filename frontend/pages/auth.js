@@ -3,6 +3,7 @@ import {
   analyzeStock,
   clearAccessToken,
   createChatSession,
+  getFavoriteStocks,
   getMe,
   getPopularStocks,
   getSearchHistories,
@@ -12,10 +13,12 @@ import {
   login,
   logout,
   recordStockSearchClick,
+  removeFavoriteStock,
   searchStocks,
   sendChatMessage,
   signup,
-  storeAccessToken
+  storeAccessToken,
+  updateFavoriteStock
 } from '../lib/api.js';
 
 const statusEl = document.querySelector('[data-auth-status]');
@@ -25,6 +28,7 @@ const loginForm = document.querySelector('[data-login-form]');
 const meButton = document.querySelector('[data-me-button]');
 const logoutButton = document.querySelector('[data-logout-button]');
 const authToggleButton = document.querySelector('[data-auth-toggle]');
+const favoritesOpenButton = document.querySelector('[data-favorites-open]');
 const authCloseButton = document.querySelector('[data-auth-close]');
 const authPanel = document.querySelector('[data-auth-panel]');
 const stockSearchForm = document.querySelector('[data-stock-search-form]');
@@ -32,6 +36,9 @@ const stockSearchInput = document.querySelector('[data-stock-search-input]');
 const stockSearchResultsEl = document.querySelector('[data-stock-search-results]');
 const searchHistoriesEl = document.querySelector('[data-search-histories]');
 const popularStocksEl = document.querySelector('[data-popular-stocks]');
+const favoritesSectionEl = document.querySelector('[data-favorites-section]');
+const favoriteListEl = document.querySelector('[data-favorite-list]');
+const favoriteCountEl = document.querySelector('[data-favorite-count]');
 const homeDashboard = document.querySelector('[data-home-dashboard]');
 const summaryPanel = document.querySelector('[data-summary-panel]');
 const summaryNameEl = document.querySelector('[data-summary-name]');
@@ -73,6 +80,7 @@ let selectedStock = null;
 let selectedSummary = null;
 let chatSessionId = null;
 let selectedMetricCode = null;
+let favoriteStocks = [];
 
 const METRIC_LABELS = {
   DEBT_RATIO: '부채비율',
@@ -119,6 +127,7 @@ meButton.addEventListener('click', async () => {
   } catch (error) {
     clearAccessToken();
     renderUser(null);
+    renderFavoriteStocks([]);
     authPanel.hidden = false;
     showError(error);
   }
@@ -131,6 +140,7 @@ logoutButton.addEventListener('click', async () => {
     await logout();
     renderUser(null);
     renderSearchHistories([]);
+    renderFavoriteStocks([]);
     setStatus('로그아웃되었습니다.');
   } catch (error) {
     showError(error);
@@ -139,6 +149,10 @@ logoutButton.addEventListener('click', async () => {
 
 authToggleButton.addEventListener('click', () => {
   authPanel.hidden = !authPanel.hidden;
+});
+
+favoritesOpenButton.addEventListener('click', async () => {
+  await openFavorites();
 });
 
 authCloseButton.addEventListener('click', () => {
@@ -212,15 +226,49 @@ favoriteButton.addEventListener('click', async () => {
     return;
   }
 
-  setStatus('관심종목에 추가하는 중...');
+  const favorite = findFavoriteByStockId(selectedStock.stock_id);
+  setStatus(favorite ? '관심종목에서 삭제하는 중...' : '관심종목에 추가하는 중...');
 
   try {
-    await addFavoriteStock({ stockId: Number(selectedStock.stock_id) });
-    favoriteButton.textContent = '관심종목 추가됨';
-    setStatus('관심종목에 추가했습니다.');
+    if (favorite) {
+      await removeFavoriteStock(favorite.favorite_id);
+    } else {
+      await addFavoriteStock({ stockId: Number(selectedStock.stock_id) });
+    }
+    await loadFavoriteStocks();
+    setStatus(favorite ? '관심종목에서 삭제했습니다.' : '관심종목에 추가했습니다.');
   } catch (error) {
     showError(error);
   }
+});
+
+favoriteListEl.addEventListener('click', async (event) => {
+  const removeButton = event.target.closest('[data-favorite-remove]');
+  if (removeButton) {
+    await deleteFavorite(removeButton.dataset.favoriteRemove);
+    return;
+  }
+
+  const moveButton = event.target.closest('[data-favorite-move]');
+  if (moveButton) {
+    await moveFavorite(moveButton.dataset.favoriteMove, Number(moveButton.dataset.direction));
+    return;
+  }
+
+  const stockButton = event.target.closest('[data-favorite-stock-id]');
+  if (stockButton) {
+    await openFavoriteStock(stockButton.dataset.favoriteStockId);
+  }
+});
+
+favoriteListEl.addEventListener('submit', async (event) => {
+  const form = event.target.closest('[data-favorite-memo-form]');
+  if (!form) {
+    return;
+  }
+
+  event.preventDefault();
+  await saveFavoriteMemo(form);
 });
 
 questionForm.addEventListener('submit', async (event) => {
@@ -237,11 +285,12 @@ async function initializeHome() {
     try {
       const result = await getMe();
       renderUser(result.user);
-      await loadSearchHistories();
+      await Promise.all([loadSearchHistories(), loadFavoriteStocks().catch(() => {})]);
       setStatus('로그인 상태입니다.');
     } catch {
       clearAccessToken();
       renderUser(null);
+      renderFavoriteStocks([]);
       setStatus('삼성전자를 검색해 볼 수 있습니다.');
     }
   }
@@ -292,6 +341,7 @@ function handleAuthResult(result, message) {
   renderUser(result.user);
   authPanel.hidden = true;
   loadSearchHistories();
+  loadFavoriteStocks().catch(showError);
   setStatus(message);
 }
 
@@ -378,12 +428,174 @@ function renderPopularStocks(stocks) {
   `).join('');
 }
 
+async function openFavorites() {
+  if (!getStoredAccessToken()) {
+    authPanel.hidden = false;
+    setStatus('관심종목을 확인하려면 로그인하세요.');
+    return;
+  }
+
+  if (!summaryPanel.hidden) {
+    closeSummary();
+  }
+
+  await loadFavoriteStocks().catch(showError);
+  favoritesSectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function loadFavoriteStocks() {
+  try {
+    const result = await getFavoriteStocks();
+    renderFavoriteStocks(result.data || []);
+  } catch (error) {
+    favoriteStocks = [];
+    favoriteCountEl.textContent = '불러오지 못했습니다.';
+    favoriteListEl.innerHTML = '<li><span>관심종목을 불러오지 못했습니다.</span></li>';
+    updateFavoriteButtonState();
+    throw error;
+  }
+}
+
+function renderFavoriteStocks(favorites) {
+  favoriteStocks = [...favorites].sort((left, right) => {
+    const orderDifference = Number(left.display_order) - Number(right.display_order);
+    if (orderDifference !== 0) {
+      return orderDifference;
+    }
+
+    return String(right.created_at || '').localeCompare(String(left.created_at || ''));
+  });
+  updateFavoriteButtonState();
+
+  if (!getStoredAccessToken()) {
+    favoriteCountEl.textContent = '로그인 후 확인할 수 있습니다.';
+    favoriteListEl.innerHTML = '<li><span>로그인 후 관심종목을 관리할 수 있습니다.</span></li>';
+    return;
+  }
+
+  favoriteCountEl.textContent = `총 ${favoriteStocks.length}개`;
+  if (!favoriteStocks.length) {
+    favoriteListEl.innerHTML = '<li><span>추가한 관심종목이 없습니다.</span></li>';
+    return;
+  }
+
+  favoriteListEl.innerHTML = favoriteStocks.map((favorite, index) => {
+    const stock = favorite.stocks || {};
+    const analysis = favorite.latest_analysis;
+    const signal = analysis?.overall_signal || 'gray';
+
+    return `
+      <li class="favorite-item">
+        <div class="favorite-item-header">
+          <button class="favorite-stock-button" type="button" data-favorite-stock-id="${escapeHtml(favorite.stock_id)}">
+            <strong>${escapeHtml(stock.company_name_ko || '종목명 없음')}</strong>
+            <span>${escapeHtml(stock.stock_code || '-')} · ${escapeHtml(stock.market || '-')}</span>
+          </button>
+          <span class="signal-chip">
+            <span class="signal-dot ${signalClass(signal)}"></span>
+            ${escapeHtml(signalLabel(signal))}
+          </span>
+        </div>
+        <p class="favorite-summary">${escapeHtml(analysis?.summary_text || '저장된 최신 AI 분석이 없습니다.')}</p>
+        <p class="favorite-caution">${escapeHtml(analysis?.caution_text || '요약분석 화면에서 재무 분석을 실행하면 주의할 점을 확인할 수 있습니다.')}</p>
+        <div class="favorite-item-footer">
+          <form class="favorite-memo-form" data-favorite-memo-form="${escapeHtml(favorite.favorite_id)}">
+            <input name="memo" type="text" maxlength="500" value="${escapeHtml(favorite.memo || '')}" placeholder="관심 메모" aria-label="${escapeHtml(stock.company_name_ko || '관심종목')} 메모" />
+            <button class="ghost-button" type="submit">저장</button>
+          </form>
+          <div class="favorite-controls">
+            <span class="favorite-date">${escapeHtml(formatDate(favorite.created_at))}</span>
+            <button class="icon-button" type="button" data-favorite-move="${escapeHtml(favorite.favorite_id)}" data-direction="-1" title="위로 이동" aria-label="위로 이동"${index === 0 ? ' disabled' : ''}>↑</button>
+            <button class="icon-button" type="button" data-favorite-move="${escapeHtml(favorite.favorite_id)}" data-direction="1" title="아래로 이동" aria-label="아래로 이동"${index === favoriteStocks.length - 1 ? ' disabled' : ''}>↓</button>
+            <button class="icon-button" type="button" data-favorite-remove="${escapeHtml(favorite.favorite_id)}" title="관심종목 삭제" aria-label="관심종목 삭제">×</button>
+          </div>
+        </div>
+      </li>
+    `;
+  }).join('');
+}
+
+function updateFavoriteButtonState() {
+  const isFavorite = selectedStock && findFavoriteByStockId(selectedStock.stock_id);
+  favoriteButton.textContent = isFavorite ? '관심종목 삭제' : '관심종목 추가';
+  favoriteButton.setAttribute('aria-pressed', String(Boolean(isFavorite)));
+}
+
+function findFavoriteByStockId(stockId) {
+  return favoriteStocks.find((favorite) => String(favorite.stock_id) === String(stockId));
+}
+
+async function deleteFavorite(favoriteId) {
+  setStatus('관심종목에서 삭제하는 중...');
+
+  try {
+    await removeFavoriteStock(favoriteId);
+    await loadFavoriteStocks();
+    setStatus('관심종목에서 삭제했습니다.');
+  } catch (error) {
+    showError(error);
+  }
+}
+
+async function moveFavorite(favoriteId, direction) {
+  const currentIndex = favoriteStocks.findIndex((favorite) => String(favorite.favorite_id) === String(favoriteId));
+  const targetIndex = currentIndex + direction;
+  if (currentIndex < 0 || targetIndex < 0 || targetIndex >= favoriteStocks.length) {
+    return;
+  }
+
+  const reorderedFavorites = [...favoriteStocks];
+  [reorderedFavorites[currentIndex], reorderedFavorites[targetIndex]] = [
+    reorderedFavorites[targetIndex],
+    reorderedFavorites[currentIndex]
+  ];
+  renderFavoriteStocks(reorderedFavorites.map((favorite, index) => ({ ...favorite, display_order: index })));
+  setStatus('관심종목 순서를 저장하는 중...');
+
+  try {
+    await Promise.all(reorderedFavorites.map((favorite, index) => (
+      updateFavoriteStock(favorite.favorite_id, { displayOrder: index })
+    )));
+    await loadFavoriteStocks();
+    setStatus('관심종목 순서를 저장했습니다.');
+  } catch (error) {
+    await loadFavoriteStocks().catch(() => {});
+    showError(error);
+  }
+}
+
+async function saveFavoriteMemo(form) {
+  setStatus('관심종목 메모를 저장하는 중...');
+
+  try {
+    await updateFavoriteStock(form.dataset.favoriteMemoForm, {
+      memo: new FormData(form).get('memo')
+    });
+    await loadFavoriteStocks();
+    setStatus('관심종목 메모를 저장했습니다.');
+  } catch (error) {
+    showError(error);
+  }
+}
+
+async function openFavoriteStock(stockId) {
+  setStatus('관심종목 분석을 불러오는 중...');
+
+  try {
+    const result = await getStockDetail(stockId);
+    await handleStockSelection(result.data);
+  } catch (error) {
+    showError(error);
+  }
+}
+
 function enterSummaryView(stock) {
   summaryNameEl.textContent = `${stock.company_name_ko} 요약분석`;
   summaryMetaEl.textContent = `${stock.stock_code} · ${stock.ticker} · ${stock.market} · ${stock.industry_name || '업종 정보 없음'}`;
   document.body.classList.add('summary-mode');
   homeDashboard.hidden = true;
   summaryPanel.hidden = false;
+  updateFavoriteButtonState();
   stockSearchResultsEl.innerHTML = '';
   window.location.hash = `summary-${stock.stock_id}`;
   summaryPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -686,6 +898,19 @@ function formatNumber(value, maximumFractionDigits = 2) {
   }
 
   return numberValue.toLocaleString('ko-KR', { maximumFractionDigits });
+}
+
+function formatDate(value) {
+  if (!value) {
+    return '-';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  return `${date.toLocaleDateString('ko-KR')} 추가`;
 }
 
 function formatMetricValue(value, unit) {

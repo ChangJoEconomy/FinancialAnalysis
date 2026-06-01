@@ -7,6 +7,7 @@ import {
   getFavoriteStocks,
   getSearchHistories,
   getAnalysisSettings,
+  patchFavoriteStock,
   updateAnalysisSettings
 } from '../services/userDataService.js';
 import { sendChatMessage, startChatSession } from '../services/chatService.js';
@@ -31,6 +32,13 @@ export async function handleMeRoute(req, res, url) {
     if (req.method === 'DELETE' && url.pathname.startsWith('/api/me/favorite-stocks/')) {
       const favoriteId = url.pathname.split('/').at(-1);
       sendJson(res, await deleteFavoriteStock(authContext, favoriteId));
+      return;
+    }
+
+    if (req.method === 'PATCH' && url.pathname.startsWith('/api/me/favorite-stocks/')) {
+      const favoriteId = url.pathname.split('/').at(-1);
+      const body = await readJsonBody(req);
+      sendJson(res, { data: await patchFavoriteStock(authContext, favoriteId, body) });
       return;
     }
 

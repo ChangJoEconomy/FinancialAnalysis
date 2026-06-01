@@ -30,6 +30,19 @@ Authorization: Bearer <accessToken>
 
 `favorite_id`와 로그인 사용자의 `user_id`가 모두 일치할 때만 삭제한다.
 
+## PATCH /api/me/favorite-stocks/:favoriteId
+
+관심종목 메모 또는 정렬 순서를 변경한다. `favorite_id`와 로그인 사용자의 `user_id`가 모두 일치할 때만 수정한다.
+
+요청:
+
+```json
+{
+  "memo": "실적 발표 후 다시 확인",
+  "displayOrder": 1
+}
+```
+
 ## GET /api/me/search-histories
 
 현재 로그인 사용자의 검색 기록만 조회한다.

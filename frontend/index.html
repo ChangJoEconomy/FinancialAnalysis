@@ -242,6 +242,123 @@
         grid-column: 1 / -1;
       }
 
+      .favorites-section {
+        grid-column: 1 / -1;
+        border-top: 1px solid #e8eaed;
+        padding-top: 20px;
+      }
+
+      .favorites-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .favorites-heading h2 {
+        margin: 0;
+        font-size: 19px;
+      }
+
+      .favorites-heading span {
+        color: #5f6368;
+        font-size: 13px;
+      }
+
+      .favorite-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .favorite-item {
+        display: grid;
+        gap: 12px;
+        border: 1px solid #e0e3e7;
+        border-radius: 8px;
+        padding: 15px;
+        background: #ffffff;
+      }
+
+      .favorite-item-header,
+      .favorite-item-footer,
+      .favorite-controls,
+      .favorite-memo-form {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .favorite-item-header,
+      .favorite-item-footer {
+        justify-content: space-between;
+      }
+
+      .favorite-stock-button {
+        display: grid;
+        justify-items: start;
+        gap: 5px;
+        border: 0;
+        padding: 0;
+        color: #202124;
+        background: transparent;
+        text-align: left;
+      }
+
+      .favorite-stock-button strong {
+        font-size: 16px;
+      }
+
+      .favorite-stock-button span,
+      .favorite-date {
+        color: #5f6368;
+        font-size: 12px;
+      }
+
+      .favorite-summary,
+      .favorite-caution {
+        margin: 0;
+        color: #3c4043;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .favorite-caution {
+        border-left: 3px solid #f9ab00;
+        padding-left: 10px;
+        color: #5f6368;
+      }
+
+      .favorite-memo-form {
+        flex: 1;
+      }
+
+      .favorite-memo-form input {
+        width: 100%;
+        min-width: 0;
+        min-height: 36px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        padding: 0 10px;
+      }
+
+      .icon-button {
+        width: 34px;
+        height: 34px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        color: #3c4043;
+        background: #ffffff;
+        font-weight: 700;
+      }
+
+      .icon-button:hover {
+        background: #f8fafd;
+      }
+
       .analysis-view {
         width: min(1100px, 100%);
         margin-top: 34px;
@@ -752,6 +869,16 @@
           display: grid;
         }
 
+        .favorite-item-header,
+        .favorite-item-footer {
+          align-items: start;
+          display: grid;
+        }
+
+        .favorite-memo-form {
+          width: 100%;
+        }
+
         .auth-panel {
           top: 58px;
           right: 16px;
@@ -765,6 +892,7 @@
     <header class="topbar">
       <div class="brand">AI 주식 분석</div>
       <div class="top-actions">
+        <button class="text-button" type="button" data-favorites-open>관심종목</button>
         <button class="text-button" type="button" data-me-button>내 정보</button>
         <button class="ghost-button" type="button" data-auth-toggle>로그인 / 회원가입</button>
         <button class="primary-button" type="button" data-logout-button>로그아웃</button>
@@ -834,6 +962,16 @@
             <li><span>검색 기록을 집계하는 중입니다.</span></li>
           </ul>
         </div>
+
+        <section class="favorites-section" data-favorites-section aria-label="관심종목">
+          <div class="favorites-heading">
+            <h2>관심종목</h2>
+            <span data-favorite-count>로그인 후 확인할 수 있습니다.</span>
+          </div>
+          <ul class="favorite-list" data-favorite-list>
+            <li><span>로그인 후 관심종목을 관리할 수 있습니다.</span></li>
+          </ul>
+        </section>
 
       </section>
 

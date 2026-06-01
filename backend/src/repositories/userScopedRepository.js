@@ -32,14 +32,41 @@ const CHAT_SESSION_SELECT = [
 ].join(',');
 
 export async function listFavoriteStocks(userId) {
-  return requestSupabaseRest(
+  const favorites = await requestSupabaseRest(
     `favorite_stocks?select=${FAVORITE_SELECT}&user_id=eq.${userId}&order=display_order.asc,created_at.desc`
   );
+
+  if (!favorites.length) {
+    return [];
+  }
+
+  const stockIds = [...new Set(favorites.map((favorite) => Number(favorite.stock_id)))];
+  const analysisRuns = await requestSupabaseRest(
+    'ai_analysis_runs?' +
+      'select=analysis_id,stock_id,analysis_type,overall_signal,overall_score,summary_text,caution_text,created_at' +
+      `&stock_id=in.(${stockIds.join(',')})` +
+      '&analysis_type=in.(financial,combined)' +
+      '&order=created_at.desc'
+  );
+  const latestAnalysisByStockId = new Map();
+
+  for (const analysis of analysisRuns) {
+    const stockId = Number(analysis.stock_id);
+    if (!latestAnalysisByStockId.has(stockId)) {
+      latestAnalysisByStockId.set(stockId, analysis);
+    }
+  }
+
+  return favorites.map((favorite) => ({
+    ...favorite,
+    latest_analysis: latestAnalysisByStockId.get(Number(favorite.stock_id)) || null
+  }));
 }
 
 export async function addFavoriteStock(userId, { stockId, memo, displayOrder = 0 }) {
-  if (!stockId) {
-    throw badRequest('stockId is required.');
+  const normalizedStockId = Number(stockId);
+  if (!Number.isInteger(normalizedStockId) || normalizedStockId <= 0) {
+    throw badRequest('stockId must be a positive integer.');
   }
 
   const rows = await requestSupabaseRest('favorite_stocks', {
@@ -47,9 +74,9 @@ export async function addFavoriteStock(userId, { stockId, memo, displayOrder = 0
     prefer: 'return=representation,resolution=merge-duplicates',
     body: {
       user_id: userId,
-      stock_id: Number(stockId),
-      memo: memo || null,
-      display_order: Number(displayOrder) || 0
+      stock_id: normalizedStockId,
+      memo: normalizeMemo(memo),
+      display_order: normalizeDisplayOrder(displayOrder)
     }
   });
 
@@ -57,15 +84,79 @@ export async function addFavoriteStock(userId, { stockId, memo, displayOrder = 0
 }
 
 export async function removeFavoriteStock(userId, favoriteId) {
-  if (!favoriteId) {
-    throw badRequest('favoriteId is required.');
-  }
+  const normalizedFavoriteId = normalizeFavoriteId(favoriteId);
 
-  await requestSupabaseRest(`favorite_stocks?favorite_id=eq.${favoriteId}&user_id=eq.${userId}`, {
+  await requestSupabaseRest(`favorite_stocks?favorite_id=eq.${normalizedFavoriteId}&user_id=eq.${userId}`, {
     method: 'DELETE'
   });
 
   return { status: 'ok' };
+}
+
+export async function updateFavoriteStock(userId, favoriteId, { memo, displayOrder }) {
+  const normalizedFavoriteId = normalizeFavoriteId(favoriteId);
+  const body = {};
+
+  if (memo !== undefined) {
+    body.memo = normalizeMemo(memo);
+  }
+
+  if (displayOrder !== undefined) {
+    body.display_order = normalizeDisplayOrder(displayOrder);
+  }
+
+  if (!Object.keys(body).length) {
+    throw badRequest('memo or displayOrder is required.');
+  }
+
+  const rows = await requestSupabaseRest(
+    `favorite_stocks?favorite_id=eq.${normalizedFavoriteId}&user_id=eq.${userId}`,
+    {
+      method: 'PATCH',
+      prefer: 'return=representation',
+      body
+    }
+  );
+
+  if (!rows.length) {
+    throw Object.assign(new Error('Favorite stock not found.'), { statusCode: 404 });
+  }
+
+  return rows[0];
+}
+
+function normalizeFavoriteId(favoriteId) {
+  const normalizedFavoriteId = Number(favoriteId);
+  if (!Number.isInteger(normalizedFavoriteId) || normalizedFavoriteId <= 0) {
+    throw badRequest('favoriteId must be a positive integer.');
+  }
+
+  return normalizedFavoriteId;
+}
+
+function normalizeMemo(memo) {
+  if (memo === undefined || memo === null || memo === '') {
+    return null;
+  }
+
+  if (typeof memo !== 'string') {
+    throw badRequest('memo must be a string.');
+  }
+
+  if (memo.trim().length > 500) {
+    throw badRequest('memo must be 500 characters or fewer.');
+  }
+
+  return memo.trim() || null;
+}
+
+function normalizeDisplayOrder(displayOrder) {
+  const normalizedDisplayOrder = Number(displayOrder);
+  if (!Number.isInteger(normalizedDisplayOrder) || normalizedDisplayOrder < 0) {
+    throw badRequest('displayOrder must be a non-negative integer.');
+  }
+
+  return normalizedDisplayOrder;
 }
 
 export async function listSearchHistories(userId, limit = 20) {
