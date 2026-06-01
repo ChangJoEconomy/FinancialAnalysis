@@ -1,4 +1,8 @@
 import { createHash } from 'node:crypto';
+import {
+  findAnalysisSettingByIdForUser,
+  findDefaultAnalysisSetting
+} from '../repositories/analysisSettingsRepository.js';
 import { listFinancialMetricValues } from '../repositories/financialStatementRepository.js';
 import { findStockById } from '../repositories/stockRepository.js';
 import {
@@ -15,6 +19,7 @@ const ANALYSIS_TYPE = 'financial';
 const METRIC_RULES = {
   DEBT_RATIO: {
     label: '부채비율',
+    category: 'stability',
     unit: '%',
     evaluate: (value) => {
       if (value < 100) {
@@ -48,6 +53,7 @@ const METRIC_RULES = {
   },
   OPERATING_MARGIN: {
     label: '영업이익률',
+    category: 'profitability',
     unit: '%',
     evaluate: (value) => {
       if (value >= 10) {
@@ -81,16 +87,19 @@ const METRIC_RULES = {
   },
   REVENUE_GROWTH: {
     label: '매출 성장률',
+    category: 'growth',
     unit: '%',
     evaluate: evaluateGrowthMetric('매출 성장률', '매출이 전년보다 뚜렷하게 증가했습니다.', '매출은 증가했지만 성장 폭은 제한적입니다.', '매출이 전년보다 감소했습니다.')
   },
   OPERATING_PROFIT_GROWTH: {
     label: '영업이익 성장률',
+    category: 'growth',
     unit: '%',
     evaluate: evaluateGrowthMetric('영업이익 성장률', '본업 이익이 전년보다 크게 개선됐습니다.', '본업 이익은 증가했지만 증가 폭은 제한적입니다.', '본업 이익이 전년보다 줄었습니다.')
   },
   ROE: {
     label: 'ROE',
+    category: 'profitability',
     unit: '%',
     evaluate: (value) => {
       if (value >= 10) {
@@ -129,7 +138,9 @@ export async function runFinancialTrafficLightAnalysis({
   fiscalYear,
   periodType = 'annual',
   fiscalQuarter = 0,
-  userId = null
+  userId = null,
+  settingId = null,
+  analysisSetting = null
 }) {
   const stock = await findStockById(stockId);
   if (!stock) {
@@ -149,17 +160,18 @@ export async function runFinancialTrafficLightAnalysis({
   }
 
   const analyzedItems = targetMetrics.map(analyzeMetric);
-  const overallScore = round(average(analyzedItems.map((item) => item.score)));
+  const resolvedSetting = analysisSetting || await resolveAnalysisSetting({ userId, settingId });
+  const overallScore = round(calculateOverallScore(analyzedItems, resolvedSetting));
   const overallSignal = signalFromScore(overallScore);
   const sourcePeriod = `${fiscalYear} ${periodType}${fiscalQuarter ? ` Q${fiscalQuarter}` : ''}`;
-  const sourceDataHash = hashMetricValues(targetMetrics);
+  const sourceDataHash = hashAnalysisInput({ metricValues: targetMetrics, analysisSetting: resolvedSetting });
   const stockName = stock.company_name_ko || stock.ticker || stock.stock_code;
-  const summary = buildSummary({ stockName, sourcePeriod, overallSignal, overallScore, analyzedItems });
+  const summary = buildSummary({ stockName, sourcePeriod, overallSignal, overallScore, analyzedItems, analysisSetting: resolvedSetting });
 
   const analysisRun = await upsertAnalysisRun({
     user_id: userId,
     stock_id: stockId,
-    setting_id: null,
+    setting_id: resolvedSetting?.setting_id || null,
     analysis_type: ANALYSIS_TYPE,
     overall_signal: overallSignal,
     overall_score: overallScore,
@@ -220,6 +232,7 @@ function analyzeMetric(metric) {
     metricValueId: metric.metric_value_id,
     metricCode: metric.metric_code,
     label: rule.label,
+    category: rule.category,
     metricValue: round(metricValue),
     industryAvgValue: nullableNumber(metric.industry_avg_value),
     previousValue: nullableNumber(metric.previous_value),
@@ -263,18 +276,72 @@ function evaluateGrowthMetric(metricName, greenExplanation, orangeExplanation, r
   };
 }
 
-function buildSummary({ stockName, sourcePeriod, overallSignal, overallScore, analyzedItems }) {
+function buildSummary({ stockName, sourcePeriod, overallSignal, overallScore, analyzedItems, analysisSetting }) {
   const greenCount = countSignal(analyzedItems, 'green');
   const orangeCount = countSignal(analyzedItems, 'orange');
   const redCount = countSignal(analyzedItems, 'red');
   const strongest = analyzedItems.reduce((best, item) => (item.score > best.score ? item : best), analyzedItems[0]);
   const weakest = analyzedItems.reduce((worst, item) => (item.score < worst.score ? item : worst), analyzedItems[0]);
 
+  const settingText = analysisSetting
+    ? ` ${analysisSetting.setting_name} 설정을 반영했습니다.`
+    : '';
+
   return {
-    summaryText: `${stockName} ${sourcePeriod} 재무 신호는 ${overallSignal}입니다. 분석 점수는 ${overallScore}점이며, green ${greenCount}개, orange ${orangeCount}개, red ${redCount}개입니다.`,
+    summaryText: `${stockName} ${sourcePeriod} 재무 신호는 ${overallSignal}입니다. 분석 점수는 ${overallScore}점이며, green ${greenCount}개, orange ${orangeCount}개, red ${redCount}개입니다.${settingText}`,
     reasonText: `가장 긍정적인 지표는 ${strongest.label}이고, 가장 확인이 필요한 지표는 ${weakest.label}입니다. ${strongest.reasonText}`,
     cautionText: `${weakest.label}은 추가 확인이 필요합니다. ${weakest.checkPointText} 이 결과는 매수/매도 추천이 아니라 재무 지표 해석입니다.`
   };
+}
+
+async function resolveAnalysisSetting({ userId, settingId }) {
+  if (!userId) {
+    return null;
+  }
+
+  if (settingId) {
+    const setting = await findAnalysisSettingByIdForUser(userId, settingId);
+    if (!setting) {
+      throw Object.assign(new Error('Analysis setting not found.'), { statusCode: 404 });
+    }
+
+    return setting;
+  }
+
+  return findDefaultAnalysisSetting(userId);
+}
+
+function calculateOverallScore(analyzedItems, analysisSetting) {
+  if (!analysisSetting) {
+    return average(analyzedItems.map((item) => item.score));
+  }
+
+  const categoryScores = new Map();
+  for (const item of analyzedItems) {
+    const scores = categoryScores.get(item.category) || [];
+    scores.push(item.score);
+    categoryScores.set(item.category, scores);
+  }
+
+  let weightedScoreSum = 0;
+  let weightSum = 0;
+  for (const [category, scores] of categoryScores.entries()) {
+    const weight = getCategoryWeight(analysisSetting, category);
+    if (weight <= 0) {
+      continue;
+    }
+
+    weightedScoreSum += average(scores) * weight;
+    weightSum += weight;
+  }
+
+  return weightSum > 0 ? weightedScoreSum / weightSum : average(analyzedItems.map((item) => item.score));
+}
+
+function getCategoryWeight(analysisSetting, category) {
+  const key = `${category}_weight`;
+  const weight = Number(analysisSetting[key]);
+  return Number.isFinite(weight) ? weight : 0;
 }
 
 function signalFromScore(score) {
@@ -289,7 +356,7 @@ function signalFromScore(score) {
   return 'red';
 }
 
-function hashMetricValues(metricValues) {
+function hashAnalysisInput({ metricValues, analysisSetting }) {
   const payload = metricValues
     .map((metric) => ({
       metric_code: metric.metric_code,
@@ -302,7 +369,22 @@ function hashMetricValues(metricValues) {
     }))
     .sort((a, b) => a.metric_code.localeCompare(b.metric_code));
 
-  return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  if (!analysisSetting) {
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  }
+
+  return createHash('sha256').update(JSON.stringify({
+    metricValues: payload,
+    analysisSetting: {
+      setting_id: analysisSetting.setting_id,
+      risk_type: analysisSetting.risk_type,
+      stability_weight: analysisSetting.stability_weight,
+      growth_weight: analysisSetting.growth_weight,
+      profitability_weight: analysisSetting.profitability_weight,
+      valuation_weight: analysisSetting.valuation_weight,
+      news_weight: analysisSetting.news_weight
+    }
+  })).digest('hex');
 }
 
 function countSignal(items, signal) {

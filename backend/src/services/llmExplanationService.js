@@ -18,6 +18,7 @@ export async function generateAndSaveFinancialLlmExplanation({
   periodType = 'annual',
   fiscalQuarter = 0,
   userId = null,
+  settingId = null,
   model = DEFAULT_MODEL
 }) {
   const stock = await findStockById(stockId);
@@ -30,7 +31,8 @@ export async function generateAndSaveFinancialLlmExplanation({
     fiscalYear,
     periodType,
     fiscalQuarter,
-    userId
+    userId,
+    settingId
   });
 
   const prompt = buildPrompt({ stock, ruleResult });

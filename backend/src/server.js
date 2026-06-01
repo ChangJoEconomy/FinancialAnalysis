@@ -53,6 +53,7 @@ const server = createServer(async (req, res) => {
         '/api/auth/me',
         '/api/me/favorite-stocks',
         '/api/me/search-histories',
+        '/api/me/analysis-settings',
         '/api/me/chat-sessions',
         '/api/stocks/search?q=삼성전자',
         '/api/stocks/popular'

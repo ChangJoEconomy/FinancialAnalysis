@@ -5,7 +5,9 @@ import {
   getChatMessages,
   getChatSessions,
   getFavoriteStocks,
-  getSearchHistories
+  getSearchHistories,
+  getAnalysisSettings,
+  updateAnalysisSettings
 } from '../services/userDataService.js';
 import { requireAuthContext } from '../utils/authContext.js';
 import { readJsonBody, sendError, sendJson } from '../utils/http.js';
@@ -39,6 +41,17 @@ export async function handleMeRoute(req, res, url) {
     if (req.method === 'POST' && url.pathname === '/api/me/search-histories') {
       const body = await readJsonBody(req);
       sendJson(res, { data: await createSearchHistory(authContext, body) }, 201);
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/me/analysis-settings') {
+      sendJson(res, { data: await getAnalysisSettings(authContext) });
+      return;
+    }
+
+    if (req.method === 'PUT' && url.pathname === '/api/me/analysis-settings') {
+      const body = await readJsonBody(req);
+      sendJson(res, { data: await updateAnalysisSettings(authContext, body) });
       return;
     }
 

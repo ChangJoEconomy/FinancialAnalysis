@@ -50,6 +50,61 @@ Authorization: Bearer <accessToken>
 
 검색 결과 클릭 흐름에서는 같은 저장 로직을 사용하는 `POST /api/stocks/search-click`을 호출한다.
 
+## GET /api/me/analysis-settings
+
+현재 로그인 사용자의 분석 설정을 조회한다. 설정이 없으면 기본 프리셋 3개를 생성한다.
+
+기본 프리셋:
+
+```text
+conservative: 안정성 중심
+balanced: 안정성, 성장성, 수익성 균형
+growth: 성장성 중심
+```
+
+응답:
+
+```json
+{
+  "data": {
+    "defaultSetting": {
+      "risk_type": "balanced",
+      "is_default": true
+    },
+    "settings": []
+  }
+}
+```
+
+## PUT /api/me/analysis-settings
+
+사용자의 기본 분석 설정을 변경한다.
+
+요청:
+
+```json
+{
+  "riskType": "growth"
+}
+```
+
+가중치를 직접 조정할 수도 있다.
+
+```json
+{
+  "riskType": "balanced",
+  "weights": {
+    "stability": 0.25,
+    "growth": 0.25,
+    "profitability": 0.25,
+    "valuation": 0.2,
+    "news": 0.05
+  }
+}
+```
+
+`user_id`는 서버가 로그인 사용자 기준으로 주입한다.
+
 ## GET /api/me/chat-sessions
 
 현재 로그인 사용자의 AI 채팅 세션만 조회한다.

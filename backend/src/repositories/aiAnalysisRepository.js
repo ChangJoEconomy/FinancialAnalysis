@@ -104,6 +104,7 @@ export async function updateAnalysisRun(analysisId, patch) {
     body: {
       overall_signal: patch.overall_signal,
       overall_score: patch.overall_score,
+      setting_id: patch.setting_id ?? null,
       summary_text: patch.summary_text,
       reason_text: patch.reason_text,
       caution_text: patch.caution_text,

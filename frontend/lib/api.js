@@ -77,6 +77,21 @@ export async function getSearchHistories() {
   });
 }
 
+export async function getAnalysisSettings() {
+  return request('/api/me/analysis-settings', {
+    method: 'GET',
+    accessToken: getStoredAccessToken()
+  });
+}
+
+export async function updateAnalysisSettings(payload) {
+  return request('/api/me/analysis-settings', {
+    method: 'PUT',
+    body: payload,
+    accessToken: getStoredAccessToken()
+  });
+}
+
 async function request(path, { method, body, accessToken } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
