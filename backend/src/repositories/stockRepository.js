@@ -25,6 +25,14 @@ export async function findStockByCode(stockCode) {
   return rows[0] || null;
 }
 
+export async function findStockById(stockId) {
+  const rows = await requestSupabaseRest(
+    `stocks?select=${STOCK_SELECT}&stock_id=eq.${Number(stockId)}&limit=1`
+  );
+
+  return rows[0] || null;
+}
+
 export async function createStock(stock) {
   const rows = await requestSupabaseRest('stocks', {
     method: 'POST',

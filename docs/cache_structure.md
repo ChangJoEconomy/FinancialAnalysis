@@ -34,3 +34,24 @@ data-cache/llm/analysis/005930/2026-05-18-summary.json
 ```
 
 실제 캐시 파일은 `.gitignore`에 의해 Git에 올라가지 않는다. 폴더 구조 유지를 위해 `.gitkeep`만 커밋한다.
+
+Step 5-2부터 캐시 파일을 저장하면 `external_data_cache_files`에는 아래 정보만 기록한다.
+
+```text
+logical_key
+file_path
+file_format
+content_hash
+byte_size
+period_start
+period_end
+expires_at
+metadata
+```
+
+검증용 명령:
+
+```bash
+cd backend
+npm run cache:demo:samsung-dart
+```

@@ -727,6 +727,45 @@ DB에는 해당 파일의 경로와 메타데이터가 저장된다.
 같은 데이터를 다시 요청하면 API를 호출하지 않고 캐시 파일을 사용한다.
 ```
 
+현재 완료 내용:
+
+```text
+backend
+- 로컬 캐시 경로 유틸 구현
+- JSON 캐시 파일 저장 구현
+- SHA-256 content_hash 계산 구현
+- file size(byte_size) 계산 구현
+- external_data_cache_files upsert 구현
+- logical_key 기반 fresh cache 조회 구현
+- 삼성전자 DART annual 캐시 메타데이터 smoke test worker 추가
+
+docs
+- docs/api/cache.md 추가
+- docs/cache_structure.md에 메타데이터 저장 흐름 추가
+```
+
+검증 명령:
+
+```bash
+cd backend
+npm run cache:demo:samsung-dart
+```
+
+검증 시 확인할 내용:
+
+```text
+data-cache/dart/005930/2024/annual.json 파일 생성
+external_data_cache_files에 logical_key=DART:dart_raw:005930:2024:annual 기록 저장
+같은 명령 재실행 시 fresh cache를 찾아 cacheHit=true 반환
+```
+
+주의:
+
+```text
+현재 annual.json은 Step 5-2 메타데이터 흐름 확인용 smoke-test payload다.
+실제 DART API 원본 응답 저장은 Step 6-1에서 같은 캐시 레이어를 사용해 구현한다.
+```
+
 ---
 
 # Phase 6. DART 재무 데이터 수집
@@ -751,6 +790,63 @@ DB에는 해당 파일의 경로와 메타데이터가 저장된다.
 삼성전자 재무제표 원본 JSON을 수집한다.
 수집한 원본은 data-cache/dart/005930 아래 저장된다.
 external_data_cache_files에 캐시 기록이 남는다.
+```
+
+현재 완료 내용:
+
+```text
+backend
+- stock_id로 종목 조회 구현
+- dart_corp_code 확인 구현
+- DART fnlttSinglAcntAll.json 호출 구현
+- 연간/분기 report type 매핑 구현
+- logical_key 기반 캐시 조회 구현
+- 유효한 캐시 파일이 있으면 DART API 호출 생략
+- DART 원본 JSON을 data-cache/dart/005930/<year> 아래 저장
+- external_data_cache_files 메타데이터 저장 연결
+- 삼성전자 수집 검증 worker 추가
+
+docs
+- docs/api/dart.md 추가
+```
+
+기존 stock-details.js에서 재활용한 부분:
+
+```text
+DART API 엔드포인트: fnlttSinglAcntAll.json
+사업보고서 reprt_code: 11011
+연결재무제표 fs_div: CFS
+DART 응답 status 확인 방식
+```
+
+정리:
+
+```text
+루트의 기존 stock-details.js는 Express/Mongoose/Yahoo 로직이 섞인 구형 컨트롤러라 현재 백엔드 구조에서는 제거했다.
+DART 수집에 필요한 호출 규칙은 backend/src/services/dartFinancialService.js로 옮겼다.
+```
+
+검증 명령:
+
+```bash
+cd backend
+npm run dart:collect:samsung
+```
+
+현재 검증 상태:
+
+```text
+DART 직접 호출 검증 성공
+- corp_code=00126380
+- fiscalYear=2024
+- reprt_code=11011
+- status=000
+- itemCount=213
+
+전체 worker 검증은 Supabase REST 연결 실패로 보류
+- npm run check:db 실패
+- 원인: Supabase REST network request failed
+- Supabase 연결이 복구되면 npm run dart:collect:samsung 재실행 필요
 ```
 
 ---

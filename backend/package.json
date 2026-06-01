@@ -7,7 +7,9 @@
     "dev": "node src/server.js",
     "start": "node src/server.js",
     "check:db": "node src/workers/checkSupabaseConnection.js",
-    "seed:stock:samsung": "node src/workers/seedSamsungStock.js"
+    "seed:stock:samsung": "node src/workers/seedSamsungStock.js",
+    "cache:demo:samsung-dart": "node src/workers/cacheSamsungDartDemo.js",
+    "dart:collect:samsung": "node src/workers/collectSamsungDartFinancials.js"
   },
   "engines": {
     "node": ">=18"
