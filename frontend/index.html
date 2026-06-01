@@ -393,6 +393,23 @@
         background: #ffffff;
       }
 
+      .metric-card-button {
+        display: block;
+        width: 100%;
+        color: #202124;
+        text-align: left;
+      }
+
+      .metric-card-button:hover {
+        border-color: #9aa0a6;
+        background: #f8fafd;
+      }
+
+      .metric-card-button.active {
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 1px #1a73e8;
+      }
+
       .metric-card-header {
         display: flex;
         align-items: center;
@@ -420,6 +437,97 @@
       .metric-check {
         border-top: 1px solid #edf0f2;
         padding-top: 10px;
+      }
+
+      .detail-panel {
+        border-top: 1px solid #e8eaed;
+        margin-top: 24px;
+        padding-top: 24px;
+      }
+
+      .detail-panel[hidden] {
+        display: none;
+      }
+
+      .detail-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .detail-header h3 {
+        margin: 0;
+        font-size: 21px;
+      }
+
+      .detail-meta {
+        margin-top: 7px;
+        color: #5f6368;
+        font-size: 13px;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .detail-stat {
+        min-height: 98px;
+        border: 1px solid #e0e3e7;
+        border-radius: 8px;
+        padding: 14px;
+        background: #ffffff;
+      }
+
+      .detail-stat span {
+        color: #5f6368;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .detail-stat strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 20px;
+      }
+
+      .detail-explanations {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .detail-copy {
+        border: 1px solid #e0e3e7;
+        border-radius: 8px;
+        padding: 15px;
+        background: #ffffff;
+      }
+
+      .detail-copy h4 {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .detail-copy p {
+        margin: 8px 0 0;
+        color: #5f6368;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .benchmark-note {
+        border-left: 3px solid #1a73e8;
+        margin-top: 12px;
+        padding: 10px 12px;
+        color: #5f6368;
+        background: #f8fafd;
+        font-size: 13px;
+        line-height: 1.6;
       }
 
       .signal-chip {
@@ -626,7 +734,9 @@
         .auth-grid,
         .signal-row,
         .analysis-overview,
-        .metric-grid {
+        .metric-grid,
+        .detail-grid,
+        .detail-explanations {
           grid-template-columns: 1fr;
         }
 
@@ -769,6 +879,49 @@
               <span data-analysis-period></span>
             </div>
             <div class="metric-grid" data-metric-grid></div>
+          </section>
+
+          <section class="detail-panel" data-metric-detail hidden aria-label="재무 지표 상세">
+            <div class="detail-header">
+              <div>
+                <h3 data-detail-title>재무 지표 상세</h3>
+                <div class="detail-meta" data-detail-meta></div>
+              </div>
+              <button class="text-button" type="button" data-detail-close>닫기</button>
+            </div>
+            <div class="detail-grid">
+              <div class="detail-stat">
+                <span>현재 값</span>
+                <strong data-detail-current-value>-</strong>
+              </div>
+              <div class="detail-stat">
+                <span>이전 기간 값</span>
+                <strong data-detail-previous-value>-</strong>
+              </div>
+              <div class="detail-stat">
+                <span>업종 평균</span>
+                <strong data-detail-industry-average>-</strong>
+              </div>
+            </div>
+            <div class="detail-explanations">
+              <div class="detail-copy">
+                <h4>쉬운 설명</h4>
+                <p data-detail-beginner-explanation></p>
+              </div>
+              <div class="detail-copy">
+                <h4>판단 이유</h4>
+                <p data-detail-reason></p>
+              </div>
+              <div class="detail-copy">
+                <h4>전년 대비 변화</h4>
+                <p data-detail-comparison></p>
+              </div>
+              <div class="detail-copy">
+                <h4>추가 확인 포인트</h4>
+                <p data-detail-check-point></p>
+              </div>
+            </div>
+            <div class="benchmark-note" data-detail-benchmark-note></div>
           </section>
 
           <section class="analysis-section" aria-label="AI 질문">

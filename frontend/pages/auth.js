@@ -47,6 +47,18 @@ const reasonTextEl = document.querySelector('[data-reason-text]');
 const cautionTextEl = document.querySelector('[data-caution-text]');
 const analysisPeriodEl = document.querySelector('[data-analysis-period]');
 const metricGridEl = document.querySelector('[data-metric-grid]');
+const metricDetailEl = document.querySelector('[data-metric-detail]');
+const detailTitleEl = document.querySelector('[data-detail-title]');
+const detailMetaEl = document.querySelector('[data-detail-meta]');
+const detailCurrentValueEl = document.querySelector('[data-detail-current-value]');
+const detailPreviousValueEl = document.querySelector('[data-detail-previous-value]');
+const detailIndustryAverageEl = document.querySelector('[data-detail-industry-average]');
+const detailBeginnerExplanationEl = document.querySelector('[data-detail-beginner-explanation]');
+const detailReasonEl = document.querySelector('[data-detail-reason]');
+const detailComparisonEl = document.querySelector('[data-detail-comparison]');
+const detailCheckPointEl = document.querySelector('[data-detail-check-point]');
+const detailBenchmarkNoteEl = document.querySelector('[data-detail-benchmark-note]');
+const detailCloseButton = document.querySelector('[data-detail-close]');
 const runAnalysisButton = document.querySelector('[data-run-analysis]');
 const refreshAnalysisButton = document.querySelector('[data-refresh-analysis]');
 const favoriteButton = document.querySelector('[data-favorite-button]');
@@ -60,6 +72,7 @@ let lastSearchResults = [];
 let selectedStock = null;
 let selectedSummary = null;
 let chatSessionId = null;
+let selectedMetricCode = null;
 
 const METRIC_LABELS = {
   DEBT_RATIO: '부채비율',
@@ -164,6 +177,22 @@ summaryCloseButton.addEventListener('click', () => {
   closeSummary();
 });
 
+metricGridEl.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-metric-code]');
+  if (!button || !selectedSummary?.metrics) {
+    return;
+  }
+
+  const metric = selectedSummary.metrics.find((item) => item.metric_code === button.dataset.metricCode);
+  if (metric) {
+    showMetricDetail(metric);
+  }
+});
+
+detailCloseButton.addEventListener('click', () => {
+  closeMetricDetail();
+});
+
 runAnalysisButton.addEventListener('click', async () => {
   await runSelectedStockAnalysis();
 });
@@ -246,6 +275,7 @@ async function handleStockSelection(stock) {
   selectedStock = stock;
   selectedSummary = null;
   chatSessionId = null;
+  selectedMetricCode = null;
   enterSummaryView(stock);
   setSummaryLoading();
 
@@ -368,6 +398,7 @@ function closeSummary() {
   homeDashboard.hidden = false;
   chatTranscriptEl.hidden = true;
   chatTranscriptEl.innerHTML = '';
+  closeMetricDetail();
   window.location.hash = '';
 }
 
@@ -448,6 +479,7 @@ function setSummaryLoading() {
   cautionTextEl.textContent = '';
   analysisPeriodEl.textContent = '';
   metricGridEl.innerHTML = '<span class="loading-text">주요 지표를 불러오는 중입니다.</span>';
+  closeMetricDetail({ rerender: false });
 }
 
 function renderSummary(summary) {
@@ -467,6 +499,15 @@ function renderSummary(summary) {
   cautionTextEl.textContent = analysis.caution_text || '';
   analysisPeriodEl.textContent = `${analysis.source_period || ''}${setting ? ` · ${setting.setting_name}` : ''}`;
   metricGridEl.innerHTML = metrics.map(renderMetricCard).join('');
+
+  if (selectedMetricCode) {
+    const selectedMetric = metrics.find((metric) => metric.metric_code === selectedMetricCode);
+    if (selectedMetric) {
+      showMetricDetail(selectedMetric, { scroll: false });
+    } else {
+      closeMetricDetail();
+    }
+  }
 }
 
 function showSummaryEmpty() {
@@ -479,7 +520,7 @@ function renderMetricCard(metric) {
   const unit = metric.metric_code === 'PER' || metric.metric_code === 'PBR' ? '배' : '%';
 
   return `
-    <article class="metric-card">
+    <button class="metric-card metric-card-button${selectedMetricCode === metric.metric_code ? ' active' : ''}" type="button" data-metric-code="${escapeHtml(metric.metric_code)}">
       <div class="metric-card-header">
         <strong>${escapeHtml(label)}</strong>
         <span class="signal-chip">
@@ -490,8 +531,90 @@ function renderMetricCard(metric) {
       <div class="metric-value">${escapeHtml(formatNumber(metric.metric_value, 2))}${escapeHtml(unit)}</div>
       <p>${escapeHtml(metric.beginner_explanation || metric.reason_text || '')}</p>
       <p class="metric-check">${escapeHtml(metric.check_point_text || '')}</p>
-    </article>
+    </button>
   `;
+}
+
+function showMetricDetail(metric, { scroll = true } = {}) {
+  selectedMetricCode = metric.metric_code;
+  const label = METRIC_LABELS[metric.metric_code] || metric.metric_code;
+  const unit = metricUnit(metric.metric_code);
+  const industryAverage = toOptionalNumber(metric.industry_avg_value);
+  const hasIndustryAverage = industryAverage !== null;
+
+  detailTitleEl.textContent = `${label} 상세`;
+  detailMetaEl.textContent = `${signalLabel(metric.signal)} · 내부 점수 ${formatNumber(metric.score, 1)}점`;
+  detailCurrentValueEl.textContent = formatMetricValue(metric.metric_value, unit);
+  detailPreviousValueEl.textContent = formatPreviousValue(metric);
+  detailIndustryAverageEl.textContent = hasIndustryAverage
+    ? formatMetricValue(industryAverage, unit)
+    : '준비 중';
+  detailBeginnerExplanationEl.textContent = metric.beginner_explanation || '설명이 준비되지 않았습니다.';
+  detailReasonEl.textContent = metric.reason_text || '판단 이유가 준비되지 않았습니다.';
+  detailComparisonEl.textContent = buildComparisonText(metric);
+  detailCheckPointEl.textContent = metric.check_point_text || '추가 확인 포인트가 준비되지 않았습니다.';
+  detailBenchmarkNoteEl.textContent = hasIndustryAverage
+    ? `업종 평균은 ${formatMetricValue(industryAverage, unit)}입니다. 현재 값과 업종 평균을 함께 비교해 보세요.`
+    : '업종 평균 데이터는 아직 준비되지 않았습니다. 현재 분석은 전년 대비 변화와 현재 재무 상태를 기준으로 판단했습니다.';
+  metricDetailEl.hidden = false;
+  rerenderMetricCards();
+
+  if (scroll) {
+    metricDetailEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function closeMetricDetail({ rerender = true } = {}) {
+  selectedMetricCode = null;
+  metricDetailEl.hidden = true;
+  if (rerender) {
+    rerenderMetricCards();
+  }
+}
+
+function rerenderMetricCards() {
+  if (!selectedSummary?.metrics?.length) {
+    return;
+  }
+
+  metricGridEl.innerHTML = selectedSummary.metrics.map(renderMetricCard).join('');
+}
+
+function buildComparisonText(metric) {
+  const previous = toOptionalNumber(metric.previous_value);
+  if (previous === null) {
+    return '이전 기간 비교 데이터가 아직 준비되지 않았습니다.';
+  }
+
+  if (metric.metric_code === 'REVENUE_GROWTH') {
+    return `전년도 매출액은 ${formatWon(previous)}입니다. 현재 매출 성장률은 ${formatMetricValue(metric.metric_value, '%')}입니다.`;
+  }
+
+  if (metric.metric_code === 'OPERATING_PROFIT_GROWTH') {
+    return `전년도 영업이익은 ${formatWon(previous)}입니다. 현재 영업이익 성장률은 ${formatMetricValue(metric.metric_value, '%')}입니다.`;
+  }
+
+  const current = Number(metric.metric_value);
+  if (!Number.isFinite(current)) {
+    return '현재 지표값을 확인할 수 없습니다.';
+  }
+
+  const difference = current - previous;
+  const direction = difference > 0 ? '상승' : difference < 0 ? '하락' : '유지';
+  return `이전 기간 ${formatMetricValue(previous, metricUnit(metric.metric_code))}에서 현재 ${formatMetricValue(current, metricUnit(metric.metric_code))}로 ${formatMetricValue(Math.abs(difference), metricUnit(metric.metric_code))}p ${direction}했습니다.`;
+}
+
+function formatPreviousValue(metric) {
+  const previous = toOptionalNumber(metric.previous_value);
+  if (previous === null) {
+    return '-';
+  }
+
+  if (metric.metric_code === 'REVENUE_GROWTH' || metric.metric_code === 'OPERATING_PROFIT_GROWTH') {
+    return formatWon(previous);
+  }
+
+  return formatMetricValue(previous, metricUnit(metric.metric_code));
 }
 
 async function askQuestion(rawQuestion) {
@@ -563,6 +686,32 @@ function formatNumber(value, maximumFractionDigits = 2) {
   }
 
   return numberValue.toLocaleString('ko-KR', { maximumFractionDigits });
+}
+
+function formatMetricValue(value, unit) {
+  return `${formatNumber(value, 2)}${unit}`;
+}
+
+function metricUnit(metricCode) {
+  return metricCode === 'PER' || metricCode === 'PBR' ? '배' : '%';
+}
+
+function formatWon(value) {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return '-';
+  }
+
+  return `${numberValue.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}원`;
+}
+
+function toOptionalNumber(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
 }
 
 function signalLabel(signal) {
