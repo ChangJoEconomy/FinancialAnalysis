@@ -10,7 +10,8 @@
     "seed:stock:samsung": "node src/workers/seedSamsungStock.js",
     "cache:demo:samsung-dart": "node src/workers/cacheSamsungDartDemo.js",
     "dart:collect:samsung": "node src/workers/collectSamsungDartFinancials.js",
-    "financial:snapshot:samsung": "node src/workers/saveSamsungFinancialSnapshots.js"
+    "financial:snapshot:samsung": "node src/workers/saveSamsungFinancialSnapshots.js",
+    "financial:line-items:samsung": "node src/workers/saveSamsungFinancialLineItems.js"
   },
   "engines": {
     "node": ">=18"

@@ -1,6 +1,6 @@
 # AI 주식 분석 서비스 프로젝트 진행 단계
 
-> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료 + 종목 검색 API 구현 완료 + 검색 기록 저장 구현 완료 + HOME 화면 구현 완료 + 삼성전자 재무제표 스냅샷 저장 완료**  
+> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료 + 종목 검색 API 구현 완료 + 검색 기록 저장 구현 완료 + HOME 화면 구현 완료 + 삼성전자 재무제표 스냅샷/주요 항목 저장 완료**  
 > 다음 목표: **종목 검색 → 재무 데이터 수집 → 지표 계산 → AI 신호등 분석 → 화면 표시**까지 MVP 흐름 완성
 
 ---
@@ -963,6 +963,53 @@ financial_line_items
 
 ```text
 financial_line_items에서 삼성전자의 주요 재무 항목을 조회할 수 있다.
+```
+
+현재 완료 내용:
+
+```text
+backend
+- DART 원본 캐시에서 주요 계정 추출 구현
+- financial_line_items upsert 구현
+- 삼성전자 2024 annual 주요 항목 저장 worker 추가
+
+저장 대상
+- 자산총계
+- 부채총계
+- 자본총계
+- 현금및현금성자산
+- 매출액
+- 영업이익
+- 당기순이익
+- 영업활동현금흐름
+
+docs
+- docs/api/financial-line-items.md 추가
+```
+
+검증 명령:
+
+```bash
+cd backend
+npm run financial:line-items:samsung
+```
+
+검증 결과:
+
+```text
+삼성전자 2024 annual 주요 항목 8개 저장 완료
+missing: []
+
+line_item_id=1 자산총계 514,531,948,000,000
+line_item_id=2 부채총계 112,339,878,000,000
+line_item_id=3 자본총계 402,192,070,000,000
+line_item_id=4 현금및현금성자산 53,705,579,000,000
+line_item_id=5 매출액 300,870,903,000,000
+line_item_id=6 영업이익 32,725,961,000,000
+line_item_id=7 당기순이익 34,451,351,000,000
+line_item_id=8 영업활동현금흐름 72,982,621,000,000
+
+재실행 시 같은 line_item_id를 반환해 중복 생성 없이 upsert 동작 확인
 ```
 
 ---
