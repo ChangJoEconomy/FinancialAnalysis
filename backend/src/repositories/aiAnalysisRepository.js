@@ -59,6 +59,19 @@ export async function findAnalysisRunBySource({ stockId, analysisType, sourceDat
   return rows[0] || null;
 }
 
+export async function findLatestAnalysisRun({ stockId, analysisType, promptVersion }) {
+  const rows = await requestSupabaseRest(
+    `ai_analysis_runs?select=${ANALYSIS_RUN_SELECT}` +
+      `&stock_id=eq.${Number(stockId)}` +
+      `&analysis_type=eq.${encodeURIComponent(analysisType)}` +
+      `&prompt_version=eq.${encodeURIComponent(promptVersion)}` +
+      '&order=created_at.desc' +
+      '&limit=1'
+  );
+
+  return rows[0] || null;
+}
+
 export async function upsertAnalysisRun(run) {
   const existing = await findAnalysisRunBySource({
     stockId: run.stock_id,

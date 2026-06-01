@@ -1369,6 +1369,46 @@ ai_analysis_runs
 요약분석 화면에서 overall_signal과 summary_text를 표시할 수 있다.
 ```
 
+현재 완료 내용:
+
+```text
+backend
+- Gemini API 호출 서비스 구현
+- 규칙 기반 분석 결과를 LLM 입력으로 변환
+- gemini-3-flash-preview 기반 초보자용 설명 생성
+- LLM 결과를 prompt_version=llm-financial-v1 분석 run으로 분리 저장
+- LLM 호출 실패 시 rules-v1-fallback으로 규칙 기반 설명 저장
+- 삼성전자 LLM 설명 생성 worker 추가
+
+docs
+- docs/api/llm-explanation.md 추가
+```
+
+검증 명령:
+
+```bash
+cd backend
+npm run analysis:llm-explanation:samsung
+```
+
+검증 결과:
+
+```text
+삼성전자 2024 annual LLM 설명 저장 완료
+
+analysis_id=2
+- ruleAnalysisId: 1
+- model_name: gemini-3-flash-preview
+- prompt_version: llm-financial-v1
+- overall_signal: green
+- overall_score: 81
+- summary_text: 삼성전자는 매우 낮은 부채비율과 급격한 이익 성장을 바탕으로 우수한 재무 건전성을 보여줍니다.
+
+ai_metric_analysis_items 5개 저장
+ai_analysis_evidences 5개 저장
+Gemini finishReason: STOP
+```
+
 ---
 
 ## Step 9-3. 분석 근거 저장
@@ -1957,9 +1997,9 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] financial_statement_snapshots 저장 (삼성전자 2024 annual 기준)
 - [x] financial_line_items 저장 (삼성전자 2023/2024 annual 기준)
 - [x] financial_metric_values 계산 및 저장 (삼성전자 2024 annual 기준, PER/PBR 제외)
-- [x] ai_analysis_runs 저장 (규칙 기반 삼성전자 2024 annual 기준)
-- [x] ai_metric_analysis_items 저장 (규칙 기반 삼성전자 2024 annual 기준)
-- [x] ai_analysis_evidences 저장 (규칙 기반 삼성전자 2024 annual 기준)
+- [x] ai_analysis_runs 저장 (규칙 기반 + LLM 설명 삼성전자 2024 annual 기준)
+- [x] ai_metric_analysis_items 저장 (규칙 기반 + LLM 설명 삼성전자 2024 annual 기준)
+- [x] ai_analysis_evidences 저장 (규칙 기반 + LLM 설명 삼성전자 2024 annual 기준)
 
 ## B. 백엔드
 
@@ -1970,7 +2010,7 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] 로컬 캐시 관리 서비스
 - [x] 재무 지표 계산 서비스
 - [x] 신호등 분석 서비스
-- [ ] LLM 설명 생성 서비스
+- [x] LLM 설명 생성 서비스
 - [ ] 요약분석 조회 API
 - [ ] 재무상세 조회 API
 - [x] 관심종목 API (사용자별 기본 데이터 보호 기준)
@@ -2002,7 +2042,7 @@ AI가 매수/매도를 대신하지 않는다.
 ## E. 발표 준비
 
 - [x] 삼성전자 데모 데이터 준비 (재무제표/주요 항목/지표 기준)
-- [x] 데모용 AI 분석 결과 준비 (규칙 기반 신호등 분석 기준)
+- [x] 데모용 AI 분석 결과 준비 (규칙 기반 신호등 + Gemini 설명 기준)
 - [ ] 발표용 사용자 시나리오 정리
 - [x] DB 구조 설명 자료 준비
 - [x] 캐싱 구조 설명 자료 준비
@@ -2012,16 +2052,16 @@ AI가 매수/매도를 대신하지 않는다.
 
 # 바로 다음 작업
 
-현재 상태에서 가장 먼저 해야 할 일은 **Phase 9. AI 설명 생성**이다.
+현재 상태에서 가장 먼저 해야 할 일은 **Phase 10. 사용자 분석 설정 구현**이다.
 
 바로 다음 순서:
 
 ```text
-1. 규칙 기반 분석 결과를 LLM 입력으로 정리
-2. gemini-3-flash-preview로 초보자용 요약 문장 생성
-3. summary_text, reason_text, caution_text를 LLM 설명으로 갱신
-4. LLM 호출 실패 시 규칙 기반 설명으로 fallback
-5. 요약분석 조회 API와 화면 표시로 연결
+1. user_analysis_settings 기본 프리셋 구조 확인
+2. 보수적/균형/성장성 설정 생성 또는 조회 로직 구현
+3. 설정별 가중치를 종합 점수 계산에 반영
+4. 선택한 설정이 ai_analysis_runs.setting_id에 남도록 연결
+5. 이후 요약분석 조회 API와 화면 표시로 연결
 ```
 
 이 단계가 끝나면 다음으로 요약분석 화면과 주요 지표 카드 UI를 연결한다.
