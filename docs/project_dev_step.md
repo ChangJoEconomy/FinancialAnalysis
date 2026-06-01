@@ -168,18 +168,27 @@ SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_ANON_KEY=
 
 DART_API_KEY=
-STOCK_API_KEY=
+STOCK_APP_KEY=
+STOCK_SECRET_KEY=
 NEWS_API_KEY=
 LLM_API_KEY=
 
 DATA_CACHE_ROOT=./data-cache
 ```
 
+현재 LLM 설정:
+
+```text
+Provider: Google Gemini API
+Model: gemini-3-flash-preview
+API Key: LLM_API_KEY
+```
+
 주의사항:
 
 ```text
 SUPABASE_SERVICE_ROLE_KEY는 절대 프론트엔드에 노출하지 않는다.
-DART_API_KEY, NEWS_API_KEY, LLM_API_KEY도 백엔드에서만 사용한다.
+DART_API_KEY, STOCK_APP_KEY, STOCK_SECRET_KEY, NEWS_API_KEY, LLM_API_KEY도 백엔드에서만 사용한다.
 프론트엔드는 백엔드 API만 호출한다.
 ```
 
@@ -1247,6 +1256,23 @@ ai_metric_analysis_items
 
 LLM은 판단 자체보다 설명 생성에 사용한다.
 
+사용 모델:
+
+```text
+Google Gemini API
+- model: gemini-3-flash-preview
+- key: LLM_API_KEY
+```
+
+연결 테스트:
+
+```text
+2026-06-01 테스트 완료
+- gemini-3-flash-preview generateContent 호출 성공
+- 응답 문장: "API가 잘 작동합니다."
+- 판단: LLM_API_KEY와 모델명 모두 정상 동작 확인
+```
+
 LLM이 할 일:
 
 ```text
@@ -1654,6 +1680,17 @@ AI 답변은 해당 종목의 실제 분석 결과를 참고한다.
 
 500MB DB 제한을 고려해 주가 데이터는 다음처럼 나눈다.
 
+주가 데이터 공급원:
+
+```text
+키움증권 REST API
+- STOCK_APP_KEY
+- STOCK_SECRET_KEY
+
+두 키는 .env에만 저장하고 백엔드에서만 사용한다.
+프론트엔드에는 키움 API 키를 직접 노출하지 않는다.
+```
+
 ```text
 DB 저장
 - 최근 30일 또는 90일 일별 주가
@@ -1873,35 +1910,35 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] DB 테이블 생성
 - [x] metric seed 입력
 - [ ] 테스트 종목 5개 입력
-- [ ] stock_aliases 입력
-- [ ] DART 원본 캐시 저장
-- [ ] financial_statement_snapshots 저장
-- [ ] financial_line_items 저장
-- [ ] financial_metric_values 계산 및 저장
+- [x] stock_aliases 입력 (삼성전자 기준)
+- [x] DART 원본 캐시 저장 (삼성전자 2023/2024 annual 기준)
+- [x] financial_statement_snapshots 저장 (삼성전자 2024 annual 기준)
+- [x] financial_line_items 저장 (삼성전자 2023/2024 annual 기준)
+- [x] financial_metric_values 계산 및 저장 (삼성전자 2024 annual 기준, PER/PBR 제외)
 - [ ] ai_analysis_runs 저장
 - [ ] ai_metric_analysis_items 저장
 - [ ] ai_analysis_evidences 저장
 
 ## B. 백엔드
 
-- [ ] Supabase 연결
-- [ ] 종목 검색 API
-- [ ] 검색 기록 저장 API
-- [ ] DART 수집 서비스
-- [ ] 로컬 캐시 관리 서비스
-- [ ] 재무 지표 계산 서비스
+- [x] Supabase 연결
+- [x] 종목 검색 API
+- [x] 검색 기록 저장 API
+- [x] DART 수집 서비스
+- [x] 로컬 캐시 관리 서비스
+- [x] 재무 지표 계산 서비스
 - [ ] 신호등 분석 서비스
 - [ ] LLM 설명 생성 서비스
 - [ ] 요약분석 조회 API
 - [ ] 재무상세 조회 API
-- [ ] 관심종목 API
+- [x] 관심종목 API (사용자별 기본 데이터 보호 기준)
 - [ ] AI 질문 API
 
 ## C. 프론트엔드
 
-- [ ] 로그인 화면
-- [ ] HOME 검색 화면
-- [ ] 검색 결과 목록
+- [x] 로그인 화면
+- [x] HOME 검색 화면
+- [x] 검색 결과 목록
 - [ ] 요약분석 화면
 - [ ] 주요 지표 카드
 - [ ] 신호등 표시 UI
@@ -1913,40 +1950,40 @@ AI가 매수/매도를 대신하지 않는다.
 
 ## D. 캐시 / 성능
 
-- [ ] data-cache 폴더 구조 생성
-- [ ] DART 원본 JSON 저장
+- [x] data-cache 폴더 구조 생성
+- [x] DART 원본 JSON 저장
 - [ ] 주가 장기 데이터 파일 저장
-- [ ] 캐시 메타데이터 DB 저장
-- [ ] expires_at 기반 재수집 여부 판단
-- [ ] 같은 요청 반복 시 캐시 재사용
+- [x] 캐시 메타데이터 DB 저장
+- [x] expires_at 기반 재수집 여부 판단
+- [x] 같은 요청 반복 시 캐시 재사용
 
 ## E. 발표 준비
 
-- [ ] 삼성전자 데모 데이터 준비
+- [x] 삼성전자 데모 데이터 준비 (재무제표/주요 항목/지표 기준)
 - [ ] 데모용 AI 분석 결과 준비
 - [ ] 발표용 사용자 시나리오 정리
-- [ ] DB 구조 설명 자료 준비
-- [ ] 캐싱 구조 설명 자료 준비
+- [x] DB 구조 설명 자료 준비
+- [x] 캐싱 구조 설명 자료 준비
 - [ ] 한계점 및 확장 방향 정리
 
 ---
 
 # 바로 다음 작업
 
-현재 상태에서 가장 먼저 해야 할 일은 **종목 마스터 데이터 입력과 검색 기능 구현**이다.
+현재 상태에서 가장 먼저 해야 할 일은 **Phase 8. AI 신호등 분석 로직 구현**이다.
 
 바로 다음 순서:
 
 ```text
-1. stocks에 삼성전자 넣기
-2. stock_aliases에 삼성전자 / 삼전 / 005930 넣기
-3. 검색 API 만들기
-4. HOME 검색창에서 삼성전자 검색되게 만들기
-5. 검색 결과 클릭 시 stock_search_histories에 저장하기
-6. 요약분석 페이지로 이동시키기
+1. financial_metric_values에서 삼성전자 2024 annual 지표 조회
+2. 지표별 green/yellow/red 판정 규칙 정의
+3. ai_analysis_runs에 분석 실행 기록 저장
+4. ai_metric_analysis_items에 지표별 신호와 설명 저장
+5. ai_analysis_evidences에 판단 근거 저장
+6. 요약분석 조회 API와 화면 표시로 연결
 ```
 
-이 단계가 끝나면 다음으로 DART 재무 데이터 수집과 지표 계산을 연결한다.
+이 단계가 끝나면 다음으로 요약분석 화면과 주요 지표 카드 UI를 연결한다.
 
 ---
 
