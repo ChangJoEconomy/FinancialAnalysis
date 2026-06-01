@@ -1,6 +1,6 @@
 # AI 주식 분석 서비스 프로젝트 진행 단계
 
-> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료 + 종목 검색 API 구현 완료 + 검색 기록 저장 구현 완료 + HOME 화면 구현 완료**  
+> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료 + 종목 검색 API 구현 완료 + 검색 기록 저장 구현 완료 + HOME 화면 구현 완료 + 삼성전자 재무제표 스냅샷 저장 완료**  
 > 다음 목표: **종목 검색 → 재무 데이터 수집 → 지표 계산 → AI 신호등 분석 → 화면 표시**까지 MVP 흐름 완성
 
 ---
@@ -888,6 +888,52 @@ DART 보고서 번호
 삼성전자 2024년 손익계산서 snapshot 저장
 삼성전자 2024년 재무상태표 snapshot 저장
 삼성전자 2024년 현금흐름표 snapshot 저장
+```
+
+현재 완료 내용:
+
+```text
+backend
+- DART 원본 캐시에서 재무제표 종류별 스냅샷 생성 구현
+- BS -> balance_sheet 매핑
+- IS -> income_statement 매핑
+- CF -> cash_flow 매핑
+- financial_statement_snapshots upsert 구현
+- cache_file_id로 external_data_cache_files와 연결
+- 삼성전자 2024 annual 스냅샷 저장 worker 추가
+
+docs
+- docs/api/financial-statements.md 추가
+```
+
+검증 명령:
+
+```bash
+cd backend
+npm run financial:snapshot:samsung
+```
+
+검증 결과:
+
+```text
+삼성전자 2024 annual 스냅샷 3개 저장 완료
+
+statement_id=1
+- statement_type: balance_sheet
+- report_name: 재무상태표
+- cache_file_id: 1
+
+statement_id=2
+- statement_type: income_statement
+- report_name: 손익계산서
+- cache_file_id: 1
+
+statement_id=3
+- statement_type: cash_flow
+- report_name: 현금흐름표
+- cache_file_id: 1
+
+재실행 시 같은 statement_id를 반환해 중복 생성 없이 upsert 동작 확인
 ```
 
 ---
