@@ -1,6 +1,6 @@
 # AI 주식 분석 서비스 프로젝트 진행 단계
 
-> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료 + 종목 검색 API 구현 완료 + 검색 기록 저장 구현 완료 + HOME 화면 구현 완료 + 삼성전자 재무제표 스냅샷/주요 항목 저장 완료**  
+> 현재 상태: **Supabase PostgreSQL 테이블 생성 완료 + metric seed 입력 완료 + 프로젝트 폴더 구조 정리 완료 + 삼성전자 종목 마스터 입력 완료 + 종목 검색 API 구현 완료 + 검색 기록 저장 구현 완료 + HOME 화면 구현 완료 + 삼성전자 재무제표 스냅샷/주요 항목/지표값 저장 완료**  
 > 다음 목표: **종목 검색 → 재무 데이터 수집 → 지표 계산 → AI 신호등 분석 → 화면 표시**까지 MVP 흐름 완성
 
 ---
@@ -1077,6 +1077,70 @@ financial_metric_values
 ```text
 삼성전자의 부채비율, 영업이익률, 매출 성장률 등이 financial_metric_values에 저장된다.
 요약분석 화면에서 주요 지표 값을 조회할 수 있다.
+```
+
+현재 완료 내용:
+
+```text
+backend
+- financial_line_items 기반 재무 지표 계산 구현
+- financial_metric_values upsert 구현
+- 2024 지표 계산 전 2023 비교 데이터 자동 준비
+- 삼성전자 지표 계산 worker 추가
+
+계산 구현 완료
+- DEBT_RATIO
+- OPERATING_MARGIN
+- REVENUE_GROWTH
+- OPERATING_PROFIT_GROWTH
+- ROE
+
+보류
+- PER: 주가/EPS 데이터 준비 후 계산
+- PBR: 주가/BPS 데이터 준비 후 계산
+
+docs
+- docs/api/financial-metrics.md 추가
+```
+
+검증 명령:
+
+```bash
+cd backend
+npm run financial:metrics:samsung
+```
+
+검증 결과:
+
+```text
+삼성전자 2024 annual 지표 5개 저장 완료
+
+metric_value_id=1 DEBT_RATIO
+- metric_value: 27.931898%
+- previous_value: 25.359837%
+- change_rate: 10.142259%
+
+metric_value_id=2 OPERATING_MARGIN
+- metric_value: 10.877077%
+- previous_value: 2.536144%
+- change_rate: 328.88255%
+
+metric_value_id=5 REVENUE_GROWTH
+- metric_value: 16.195311%
+- previous_value: 258,935,494,000,000
+- change_rate: 16.195311%
+
+metric_value_id=3 OPERATING_PROFIT_GROWTH
+- metric_value: 398.341413%
+- previous_value: 6,566,976,000,000
+- change_rate: 398.341413%
+
+metric_value_id=4 ROE
+- metric_value: 8.565895%
+- previous_value: 4.258466%
+- change_rate: 101.149761%
+
+재실행 시 같은 metric_value_id를 반환해 중복 생성 없이 upsert 동작 확인
 ```
 
 ---

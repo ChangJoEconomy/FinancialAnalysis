@@ -115,8 +115,7 @@ export async function saveFinancialLineItemsFromDart({
 function findDartRow(rows, target) {
   return rows.find((row) =>
     row.sj_div === target.sjDiv &&
-    row.account_id === target.accountId &&
-    row.account_nm === target.accountName
+    row.account_id === target.accountId
   ) || rows.find((row) =>
     row.sj_div === target.sjDiv &&
     row.account_nm === target.accountName

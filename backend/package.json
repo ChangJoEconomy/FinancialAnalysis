@@ -11,7 +11,8 @@
     "cache:demo:samsung-dart": "node src/workers/cacheSamsungDartDemo.js",
     "dart:collect:samsung": "node src/workers/collectSamsungDartFinancials.js",
     "financial:snapshot:samsung": "node src/workers/saveSamsungFinancialSnapshots.js",
-    "financial:line-items:samsung": "node src/workers/saveSamsungFinancialLineItems.js"
+    "financial:line-items:samsung": "node src/workers/saveSamsungFinancialLineItems.js",
+    "financial:metrics:samsung": "node src/workers/calculateSamsungFinancialMetrics.js"
   },
   "engines": {
     "node": ">=18"
