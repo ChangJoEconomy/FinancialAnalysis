@@ -1,13 +1,19 @@
 import {
+  addFavoriteStock,
+  analyzeStock,
   clearAccessToken,
+  createChatSession,
   getMe,
   getPopularStocks,
   getSearchHistories,
+  getStockDetail,
+  getStockSummary,
   getStoredAccessToken,
   login,
   logout,
   recordStockSearchClick,
   searchStocks,
+  sendChatMessage,
   signup,
   storeAccessToken
 } from '../lib/api.js';
@@ -26,14 +32,42 @@ const stockSearchInput = document.querySelector('[data-stock-search-input]');
 const stockSearchResultsEl = document.querySelector('[data-stock-search-results]');
 const searchHistoriesEl = document.querySelector('[data-search-histories]');
 const popularStocksEl = document.querySelector('[data-popular-stocks]');
+const homeDashboard = document.querySelector('[data-home-dashboard]');
 const summaryPanel = document.querySelector('[data-summary-panel]');
 const summaryNameEl = document.querySelector('[data-summary-name]');
 const summaryMetaEl = document.querySelector('[data-summary-meta]');
 const summaryCloseButton = document.querySelector('[data-summary-close]');
+const summaryEmptyEl = document.querySelector('[data-summary-empty]');
+const summaryContentEl = document.querySelector('[data-summary-content]');
+const overallSignalDotEl = document.querySelector('[data-overall-signal-dot]');
+const overallSignalEl = document.querySelector('[data-overall-signal]');
+const overallScoreEl = document.querySelector('[data-overall-score]');
+const summaryTextEl = document.querySelector('[data-summary-text]');
+const reasonTextEl = document.querySelector('[data-reason-text]');
+const cautionTextEl = document.querySelector('[data-caution-text]');
+const analysisPeriodEl = document.querySelector('[data-analysis-period]');
+const metricGridEl = document.querySelector('[data-metric-grid]');
+const runAnalysisButton = document.querySelector('[data-run-analysis]');
+const refreshAnalysisButton = document.querySelector('[data-refresh-analysis]');
+const favoriteButton = document.querySelector('[data-favorite-button]');
+const questionForm = document.querySelector('[data-question-form]');
+const questionInput = document.querySelector('[data-question-input]');
+const chatTranscriptEl = document.querySelector('[data-chat-transcript]');
 
 let lastSearchQuery = '';
 let lastSearchResultCount = 0;
 let lastSearchResults = [];
+let selectedStock = null;
+let selectedSummary = null;
+let chatSessionId = null;
+
+const METRIC_LABELS = {
+  DEBT_RATIO: '부채비율',
+  OPERATING_MARGIN: '영업이익률',
+  OPERATING_PROFIT_GROWTH: '영업이익 성장률',
+  REVENUE_GROWTH: '매출 성장률',
+  ROE: '자기자본이익률'
+};
 
 signupForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -127,8 +161,42 @@ popularStocksEl.addEventListener('click', async (event) => {
 });
 
 summaryCloseButton.addEventListener('click', () => {
-  summaryPanel.hidden = true;
-  window.location.hash = '';
+  closeSummary();
+});
+
+runAnalysisButton.addEventListener('click', async () => {
+  await runSelectedStockAnalysis();
+});
+
+refreshAnalysisButton.addEventListener('click', async () => {
+  await runSelectedStockAnalysis({ forceRefresh: true });
+});
+
+favoriteButton.addEventListener('click', async () => {
+  if (!selectedStock) {
+    return;
+  }
+
+  if (!getStoredAccessToken()) {
+    authPanel.hidden = false;
+    setStatus('관심종목을 추가하려면 로그인하세요.');
+    return;
+  }
+
+  setStatus('관심종목에 추가하는 중...');
+
+  try {
+    await addFavoriteStock({ stockId: Number(selectedStock.stock_id) });
+    favoriteButton.textContent = '관심종목 추가됨';
+    setStatus('관심종목에 추가했습니다.');
+  } catch (error) {
+    showError(error);
+  }
+});
+
+questionForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await askQuestion(questionInput.value);
 });
 
 await initializeHome();
@@ -148,6 +216,8 @@ async function initializeHome() {
       setStatus('삼성전자를 검색해 볼 수 있습니다.');
     }
   }
+
+  await loadSummaryFromHash();
 }
 
 async function runStockSearch(query) {
@@ -173,27 +243,18 @@ async function runStockSearch(query) {
 }
 
 async function handleStockSelection(stock) {
-  showSummary(stock);
+  selectedStock = stock;
+  selectedSummary = null;
+  chatSessionId = null;
+  enterSummaryView(stock);
+  setSummaryLoading();
 
-  if (!getStoredAccessToken()) {
-    authPanel.hidden = false;
-    setStatus('로그인하면 최근 검색 기록에 저장됩니다.');
-    return;
+  const tasks = [loadStockSummary(stock.stock_id)];
+  if (getStoredAccessToken()) {
+    tasks.push(saveSearchSelection(stock));
   }
 
-  setStatus('검색 기록 저장 중...');
-
-  try {
-    await recordStockSearchClick({
-      queryText: lastSearchQuery || stock.company_name_ko,
-      stockId: Number(stock.stock_id),
-      resultCount: lastSearchResultCount || 1
-    });
-    await Promise.all([loadSearchHistories(), loadPopularStocks()]);
-    setStatus('검색 기록을 저장했습니다.');
-  } catch (error) {
-    showError(error);
-  }
+  await Promise.all(tasks);
 }
 
 function handleAuthResult(result, message) {
@@ -287,12 +348,195 @@ function renderPopularStocks(stocks) {
   `).join('');
 }
 
-function showSummary(stock) {
+function enterSummaryView(stock) {
   summaryNameEl.textContent = `${stock.company_name_ko} 요약분석`;
   summaryMetaEl.textContent = `${stock.stock_code} · ${stock.ticker} · ${stock.market} · ${stock.industry_name || '업종 정보 없음'}`;
+  document.body.classList.add('summary-mode');
+  homeDashboard.hidden = true;
   summaryPanel.hidden = false;
+  stockSearchResultsEl.innerHTML = '';
   window.location.hash = `summary-${stock.stock_id}`;
   summaryPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeSummary() {
+  selectedStock = null;
+  selectedSummary = null;
+  chatSessionId = null;
+  document.body.classList.remove('summary-mode');
+  summaryPanel.hidden = true;
+  homeDashboard.hidden = false;
+  chatTranscriptEl.hidden = true;
+  chatTranscriptEl.innerHTML = '';
+  window.location.hash = '';
+}
+
+async function saveSearchSelection(stock) {
+  try {
+    await recordStockSearchClick({
+      queryText: lastSearchQuery || stock.company_name_ko,
+      stockId: Number(stock.stock_id),
+      resultCount: lastSearchResultCount || 1
+    });
+    await Promise.all([loadSearchHistories(), loadPopularStocks()]);
+  } catch (error) {
+    showError(error);
+  }
+}
+
+async function loadSummaryFromHash() {
+  const match = window.location.hash.match(/^#summary-(\d+)$/);
+  if (!match) {
+    return;
+  }
+
+  try {
+    const result = await getStockDetail(match[1]);
+    selectedStock = result.data;
+    enterSummaryView(selectedStock);
+    setSummaryLoading();
+    await loadStockSummary(selectedStock.stock_id);
+  } catch (error) {
+    showError(error);
+  }
+}
+
+async function loadStockSummary(stockId) {
+  setStatus('요약분석을 불러오는 중...');
+
+  try {
+    const result = await getStockSummary(stockId);
+    selectedSummary = result.data;
+    renderSummary(selectedSummary);
+    setStatus(selectedSummary.analysis ? '요약분석을 불러왔습니다.' : '저장된 분석 결과가 없습니다.');
+  } catch (error) {
+    showError(error);
+    showSummaryEmpty();
+  }
+}
+
+async function runSelectedStockAnalysis({ forceRefresh = false } = {}) {
+  if (!selectedStock) {
+    return;
+  }
+
+  setSummaryLoading();
+  setStatus(forceRefresh ? '재무 데이터를 확인하고 분석을 갱신하는 중...' : '재무 분석을 실행하는 중...');
+
+  try {
+    const result = await analyzeStock(selectedStock.stock_id, {
+      fiscalYear: 2024,
+      forceRefresh
+    });
+    selectedSummary = result.data;
+    renderSummary(selectedSummary);
+    setStatus(result.data.cached ? '저장된 최신 분석 결과를 불러왔습니다.' : '새로운 분석 결과를 저장했습니다.');
+  } catch (error) {
+    showError(error);
+    showSummaryEmpty();
+  }
+}
+
+function setSummaryLoading() {
+  summaryEmptyEl.hidden = true;
+  summaryContentEl.hidden = false;
+  overallSignalDotEl.className = 'signal-dot gray';
+  overallSignalEl.textContent = '분석 중';
+  overallScoreEl.textContent = '-';
+  summaryTextEl.textContent = '재무 분석 결과를 확인하고 있습니다.';
+  reasonTextEl.textContent = '';
+  cautionTextEl.textContent = '';
+  analysisPeriodEl.textContent = '';
+  metricGridEl.innerHTML = '<span class="loading-text">주요 지표를 불러오는 중입니다.</span>';
+}
+
+function renderSummary(summary) {
+  if (!summary?.analysis) {
+    showSummaryEmpty();
+    return;
+  }
+
+  const { analysis, metrics = [], setting } = summary;
+  summaryEmptyEl.hidden = true;
+  summaryContentEl.hidden = false;
+  overallSignalDotEl.className = `signal-dot ${signalClass(analysis.overall_signal)}`;
+  overallSignalEl.textContent = signalLabel(analysis.overall_signal);
+  overallScoreEl.textContent = formatNumber(analysis.overall_score, 1);
+  summaryTextEl.textContent = analysis.summary_text || '';
+  reasonTextEl.textContent = analysis.reason_text || '';
+  cautionTextEl.textContent = analysis.caution_text || '';
+  analysisPeriodEl.textContent = `${analysis.source_period || ''}${setting ? ` · ${setting.setting_name}` : ''}`;
+  metricGridEl.innerHTML = metrics.map(renderMetricCard).join('');
+}
+
+function showSummaryEmpty() {
+  summaryEmptyEl.hidden = false;
+  summaryContentEl.hidden = true;
+}
+
+function renderMetricCard(metric) {
+  const label = METRIC_LABELS[metric.metric_code] || metric.metric_code;
+  const unit = metric.metric_code === 'PER' || metric.metric_code === 'PBR' ? '배' : '%';
+
+  return `
+    <article class="metric-card">
+      <div class="metric-card-header">
+        <strong>${escapeHtml(label)}</strong>
+        <span class="signal-chip">
+          <span class="signal-dot ${signalClass(metric.signal)}"></span>
+          ${escapeHtml(signalLabel(metric.signal))}
+        </span>
+      </div>
+      <div class="metric-value">${escapeHtml(formatNumber(metric.metric_value, 2))}${escapeHtml(unit)}</div>
+      <p>${escapeHtml(metric.beginner_explanation || metric.reason_text || '')}</p>
+      <p class="metric-check">${escapeHtml(metric.check_point_text || '')}</p>
+    </article>
+  `;
+}
+
+async function askQuestion(rawQuestion) {
+  const question = rawQuestion.trim();
+  if (!question || !selectedStock) {
+    return;
+  }
+
+  if (!getStoredAccessToken()) {
+    authPanel.hidden = false;
+    setStatus('AI 질문을 보내려면 로그인하세요.');
+    return;
+  }
+
+  renderChatMessage('user', question);
+  questionInput.value = '';
+  questionInput.disabled = true;
+  setStatus('AI가 재무 분석 결과를 확인하는 중...');
+
+  try {
+    if (!chatSessionId) {
+      const sessionResult = await createChatSession({
+        stockId: Number(selectedStock.stock_id),
+        settingId: selectedSummary?.setting?.setting_id || null,
+        title: `${selectedStock.company_name_ko} 재무 질문`
+      });
+      chatSessionId = sessionResult.data.chat_session_id;
+    }
+
+    const result = await sendChatMessage(chatSessionId, question);
+    renderChatMessage('assistant', result.data.assistantMessage.message_text);
+    setStatus('AI 답변을 저장했습니다.');
+  } catch (error) {
+    showError(error);
+  } finally {
+    questionInput.disabled = false;
+    questionInput.focus();
+  }
+}
+
+function renderChatMessage(role, message) {
+  chatTranscriptEl.hidden = false;
+  chatTranscriptEl.insertAdjacentHTML('beforeend', `
+    <div class="chat-message ${escapeHtml(role)}">${escapeHtml(message)}</div>
+  `);
 }
 
 function setStatus(message) {
@@ -310,4 +554,26 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function formatNumber(value, maximumFractionDigits = 2) {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return '-';
+  }
+
+  return numberValue.toLocaleString('ko-KR', { maximumFractionDigits });
+}
+
+function signalLabel(signal) {
+  return {
+    green: '양호',
+    orange: '확인 필요',
+    red: '주의',
+    gray: '분석 전'
+  }[signal] || '분석 전';
+}
+
+function signalClass(signal) {
+  return ['green', 'orange', 'red', 'gray'].includes(signal) ? signal : 'gray';
 }

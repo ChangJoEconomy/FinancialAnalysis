@@ -42,6 +42,7 @@
         font-size: 15px;
         font-weight: 700;
         color: #3c4043;
+        white-space: nowrap;
       }
 
       .top-actions {
@@ -58,6 +59,7 @@
         border-radius: 6px;
         padding: 0 14px;
         font-weight: 700;
+        white-space: nowrap;
       }
 
       .text-button {
@@ -78,6 +80,7 @@
       .home {
         display: grid;
         place-items: start center;
+        align-content: start;
         min-height: calc(100vh - 74px);
         padding: 72px 20px 56px;
       }
@@ -85,6 +88,7 @@
       .search-stage {
         width: min(720px, 100%);
         text-align: center;
+        transition: width 180ms ease;
       }
 
       h1 {
@@ -93,6 +97,20 @@
         font-size: 54px;
         font-weight: 700;
         letter-spacing: 0;
+      }
+
+      .summary-mode .home {
+        padding-top: 26px;
+      }
+
+      .summary-mode .search-stage {
+        width: min(900px, 100%);
+      }
+
+      .summary-mode h1 {
+        margin-bottom: 18px;
+        font-size: 28px;
+        text-align: left;
       }
 
       .search-form {
@@ -224,11 +242,261 @@
         grid-column: 1 / -1;
       }
 
-      .summary-header {
+      .analysis-view {
+        width: min(1100px, 100%);
+        margin-top: 34px;
+      }
+
+      .analysis-view[hidden],
+      .home-dashboard[hidden],
+      .summary-empty[hidden],
+      .summary-content[hidden],
+      .chat-transcript[hidden] {
+        display: none;
+      }
+
+      .analysis-header {
         display: flex;
         align-items: start;
         justify-content: space-between;
+        gap: 18px;
+        border-bottom: 1px solid #e8eaed;
+        padding-bottom: 18px;
+      }
+
+      .analysis-header h2 {
+        margin: 0 0 7px;
+        font-size: 27px;
+      }
+
+      .analysis-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: end;
+        gap: 8px;
+      }
+
+      .analysis-overview {
+        display: grid;
+        grid-template-columns: 210px minmax(0, 1fr);
+        gap: 24px;
+        border-bottom: 1px solid #e8eaed;
+        padding: 24px 0;
+      }
+
+      .overall-signal {
+        display: grid;
+        align-content: center;
+        min-height: 172px;
+        border: 1px solid #e0e3e7;
+        border-radius: 8px;
+        padding: 20px;
+        background: #ffffff;
+      }
+
+      .signal-label {
+        color: #5f6368;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .signal-value {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
+        color: #202124;
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .signal-dot {
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        background: #9aa0a6;
+      }
+
+      .signal-dot.green {
+        background: #188038;
+      }
+
+      .signal-dot.orange {
+        background: #e37400;
+      }
+
+      .signal-dot.red {
+        background: #d93025;
+      }
+
+      .signal-dot.gray {
+        background: #9aa0a6;
+      }
+
+      .score {
+        margin-top: 14px;
+        color: #3c4043;
+        font-size: 14px;
+      }
+
+      .analysis-copy {
+        padding: 6px 0;
+      }
+
+      .analysis-copy h3,
+      .section-heading h3 {
+        margin: 0;
+        color: #202124;
+        font-size: 18px;
+      }
+
+      .analysis-copy p {
+        margin: 10px 0 0;
+        color: #3c4043;
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      .caution {
+        border-left: 3px solid #f9ab00;
+        padding-left: 12px;
+      }
+
+      .analysis-section {
+        padding: 24px 0 0;
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .section-heading span {
+        color: #5f6368;
+        font-size: 13px;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px;
+      }
+
+      .metric-card {
+        min-height: 224px;
+        border: 1px solid #e0e3e7;
+        border-radius: 8px;
+        padding: 16px;
+        background: #ffffff;
+      }
+
+      .metric-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .metric-card-header strong {
+        font-size: 15px;
+      }
+
+      .metric-value {
+        margin-top: 18px;
+        font-size: 28px;
+        font-weight: 700;
+      }
+
+      .metric-card p {
+        margin: 10px 0 0;
+        color: #5f6368;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .metric-check {
+        border-top: 1px solid #edf0f2;
+        padding-top: 10px;
+      }
+
+      .signal-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #5f6368;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .signal-chip .signal-dot {
+        width: 9px;
+        height: 9px;
+      }
+
+      .question-form {
+        display: flex;
+        gap: 8px;
+        border-top: 1px solid #e8eaed;
+        margin-top: 24px;
+        padding-top: 24px;
+      }
+
+      .question-form button {
+        min-width: 98px;
+      }
+
+      .question-form input {
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        padding: 0 12px;
+      }
+
+      .chat-transcript {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .chat-message {
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .chat-message.user {
+        margin-left: 18%;
+        background: #e8f0fe;
+      }
+
+      .chat-message.assistant {
+        margin-right: 10%;
+        border: 1px solid #e0e3e7;
+        background: #ffffff;
+      }
+
+      .summary-empty {
+        border: 1px solid #e0e3e7;
+        border-radius: 8px;
+        margin-top: 22px;
+        padding: 22px;
+      }
+
+      .summary-empty p {
+        margin: 0 0 12px;
+        color: #5f6368;
+        line-height: 1.6;
+      }
+
+      .loading-text {
+        color: #5f6368;
+        font-size: 14px;
       }
 
       .summary h2 {
@@ -324,7 +592,22 @@
 
       @media (max-width: 720px) {
         .topbar {
+          gap: 8px;
           padding: 14px 16px;
+        }
+
+        .top-actions {
+          gap: 4px;
+        }
+
+        .top-actions button {
+          min-height: 34px;
+          padding: 0 8px;
+          font-size: 12px;
+        }
+
+        .brand {
+          font-size: 13px;
         }
 
         .home {
@@ -341,8 +624,22 @@
 
         .dashboard,
         .auth-grid,
-        .signal-row {
+        .signal-row,
+        .analysis-overview,
+        .metric-grid {
           grid-template-columns: 1fr;
+        }
+
+        .analysis-header {
+          display: grid;
+        }
+
+        .analysis-actions {
+          justify-content: start;
+        }
+
+        .question-form {
+          display: grid;
         }
 
         .auth-panel {
@@ -413,7 +710,7 @@
         <ul class="result-list" data-stock-search-results></ul>
       </section>
 
-      <section class="dashboard" aria-label="HOME 정보">
+      <section class="dashboard home-dashboard" data-home-dashboard aria-label="HOME 정보">
         <div class="panel">
           <h2>최근 본 종목</h2>
           <ul class="stock-list" data-search-histories>
@@ -428,28 +725,63 @@
           </ul>
         </div>
 
-        <div class="panel summary" data-summary-panel hidden>
-          <div class="summary-header">
-            <div>
-              <h2 data-summary-name>요약분석</h2>
-              <div class="summary-meta" data-summary-meta></div>
-            </div>
-            <button class="ghost-button" type="button" data-summary-close>HOME</button>
+      </section>
+
+      <section class="analysis-view" data-summary-panel hidden aria-label="종목 요약분석">
+        <header class="analysis-header">
+          <div>
+            <h2 data-summary-name>요약분석</h2>
+            <div class="summary-meta" data-summary-meta></div>
           </div>
-          <div class="signal-row">
-            <div class="signal">
-              <strong>재무 신호</strong>
-              <span>준비 중</span>
-            </div>
-            <div class="signal">
-              <strong>위험 신호</strong>
-              <span>준비 중</span>
-            </div>
-            <div class="signal">
-              <strong>AI 설명</strong>
-              <span>준비 중</span>
-            </div>
+          <div class="analysis-actions">
+            <button class="ghost-button" type="button" data-favorite-button>관심종목 추가</button>
+            <button class="ghost-button" type="button" data-refresh-analysis>분석 새로고침</button>
+            <button class="text-button" type="button" data-summary-close>HOME</button>
           </div>
+        </header>
+
+        <div class="summary-empty" data-summary-empty hidden>
+          <p>저장된 요약분석이 없습니다. 재무 데이터를 확인하고 분석을 실행합니다.</p>
+          <button class="primary-button" type="button" data-run-analysis>분석 실행</button>
+        </div>
+
+        <div class="summary-content" data-summary-content hidden>
+          <section class="analysis-overview" aria-label="종합 분석">
+            <div class="overall-signal">
+              <span class="signal-label">전체 재무 신호</span>
+              <div class="signal-value">
+                <span class="signal-dot gray" data-overall-signal-dot></span>
+                <span data-overall-signal>확인 중</span>
+              </div>
+              <div class="score"><strong data-overall-score>-</strong> / 100</div>
+            </div>
+            <div class="analysis-copy">
+              <h3>AI 요약</h3>
+              <p data-summary-text></p>
+              <p data-reason-text></p>
+              <p class="caution" data-caution-text></p>
+            </div>
+          </section>
+
+          <section class="analysis-section" aria-label="주요 지표">
+            <div class="section-heading">
+              <h3>주요 재무 지표</h3>
+              <span data-analysis-period></span>
+            </div>
+            <div class="metric-grid" data-metric-grid></div>
+          </section>
+
+          <section class="analysis-section" aria-label="AI 질문">
+            <div class="section-heading">
+              <h3>AI에게 추가 질문</h3>
+              <span>재무 분석 결과를 바탕으로 답변합니다.</span>
+            </div>
+            <form class="question-form" data-question-form>
+              <input data-question-input type="text" placeholder="예: 이 회사에서 가장 먼저 확인할 점은 뭐야?" />
+              <button class="primary-button" type="submit">질문 보내기</button>
+            </form>
+            <div class="chat-transcript" data-chat-transcript hidden></div>
+          </section>
         </div>
       </section>
     </main>

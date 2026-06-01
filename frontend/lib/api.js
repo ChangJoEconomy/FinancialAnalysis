@@ -105,6 +105,14 @@ export async function getSearchHistories() {
   });
 }
 
+export async function addFavoriteStock(payload) {
+  return request('/api/me/favorite-stocks', {
+    method: 'POST',
+    body: payload,
+    accessToken: getStoredAccessToken()
+  });
+}
+
 export async function getAnalysisSettings() {
   return request('/api/me/analysis-settings', {
     method: 'GET',
