@@ -1248,6 +1248,48 @@ ai_metric_analysis_items
 각 지표별 판단 이유가 저장된다.
 ```
 
+현재 완료 내용:
+
+```text
+backend
+- financial_metric_values 기반 규칙 기반 신호등 분석 구현
+- ai_analysis_runs upsert 구현
+- ai_metric_analysis_items upsert 구현
+- ai_analysis_evidences 저장 구현
+- 삼성전자 신호등 분석 worker 추가
+
+docs
+- docs/api/traffic-light-analysis.md 추가
+```
+
+검증 명령:
+
+```bash
+cd backend
+npm run analysis:traffic-light:samsung
+```
+
+검증 결과:
+
+```text
+삼성전자 2024 annual 규칙 기반 분석 저장 완료
+
+analysis_id=1
+- overall_signal: green
+- overall_score: 81
+- summary_text: 삼성전자 2024 annual 재무 신호는 green입니다.
+
+지표별 결과
+- DEBT_RATIO: green, score 90
+- OPERATING_MARGIN: green, score 85
+- OPERATING_PROFIT_GROWTH: green, score 85
+- REVENUE_GROWTH: green, score 85
+- ROE: orange, score 60
+
+ai_metric_analysis_items 5개 저장
+ai_analysis_evidences 5개 저장
+```
+
 ---
 
 # Phase 9. AI 설명 생성
@@ -1915,9 +1957,9 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] financial_statement_snapshots 저장 (삼성전자 2024 annual 기준)
 - [x] financial_line_items 저장 (삼성전자 2023/2024 annual 기준)
 - [x] financial_metric_values 계산 및 저장 (삼성전자 2024 annual 기준, PER/PBR 제외)
-- [ ] ai_analysis_runs 저장
-- [ ] ai_metric_analysis_items 저장
-- [ ] ai_analysis_evidences 저장
+- [x] ai_analysis_runs 저장 (규칙 기반 삼성전자 2024 annual 기준)
+- [x] ai_metric_analysis_items 저장 (규칙 기반 삼성전자 2024 annual 기준)
+- [x] ai_analysis_evidences 저장 (규칙 기반 삼성전자 2024 annual 기준)
 
 ## B. 백엔드
 
@@ -1927,7 +1969,7 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] DART 수집 서비스
 - [x] 로컬 캐시 관리 서비스
 - [x] 재무 지표 계산 서비스
-- [ ] 신호등 분석 서비스
+- [x] 신호등 분석 서비스
 - [ ] LLM 설명 생성 서비스
 - [ ] 요약분석 조회 API
 - [ ] 재무상세 조회 API
@@ -1960,7 +2002,7 @@ AI가 매수/매도를 대신하지 않는다.
 ## E. 발표 준비
 
 - [x] 삼성전자 데모 데이터 준비 (재무제표/주요 항목/지표 기준)
-- [ ] 데모용 AI 분석 결과 준비
+- [x] 데모용 AI 분석 결과 준비 (규칙 기반 신호등 분석 기준)
 - [ ] 발표용 사용자 시나리오 정리
 - [x] DB 구조 설명 자료 준비
 - [x] 캐싱 구조 설명 자료 준비
@@ -1970,17 +2012,16 @@ AI가 매수/매도를 대신하지 않는다.
 
 # 바로 다음 작업
 
-현재 상태에서 가장 먼저 해야 할 일은 **Phase 8. AI 신호등 분석 로직 구현**이다.
+현재 상태에서 가장 먼저 해야 할 일은 **Phase 9. AI 설명 생성**이다.
 
 바로 다음 순서:
 
 ```text
-1. financial_metric_values에서 삼성전자 2024 annual 지표 조회
-2. 지표별 green/yellow/red 판정 규칙 정의
-3. ai_analysis_runs에 분석 실행 기록 저장
-4. ai_metric_analysis_items에 지표별 신호와 설명 저장
-5. ai_analysis_evidences에 판단 근거 저장
-6. 요약분석 조회 API와 화면 표시로 연결
+1. 규칙 기반 분석 결과를 LLM 입력으로 정리
+2. gemini-3-flash-preview로 초보자용 요약 문장 생성
+3. summary_text, reason_text, caution_text를 LLM 설명으로 갱신
+4. LLM 호출 실패 시 규칙 기반 설명으로 fallback
+5. 요약분석 조회 API와 화면 표시로 연결
 ```
 
 이 단계가 끝나면 다음으로 요약분석 화면과 주요 지표 카드 UI를 연결한다.
