@@ -28,7 +28,7 @@ data-cache/dart/005930/2024/q2.json
 data-cache/dart/005930/2024/q3.json
 data-cache/prices/005930/daily.json
 data-cache/prices/005930/basic-info.json
-data-cache/news/005930/2026-05-18.json
+data-cache/news/005930/YYYY-MM-DD.json
 data-cache/llm/analysis/005930/2026-05-18-summary.json
 ```
 
@@ -47,6 +47,12 @@ data-cache/prices/005930/basic-info.json
 - 키움 REST API ka10001 원본 응답
 - 현재가, PER, EPS, PBR, BPS 밸류에이션 스냅샷
 - external_data_cache_files.cache_type=stock_basic_info
+
+data-cache/news/005930/YYYY-MM-DD.json
+- 네이버 뉴스 검색 API 원본 응답
+- 제목, 요약, URL, 발행일 메타데이터
+- external_data_cache_files.cache_type=news_raw
+- 기사 원문 전문은 복제해 저장하지 않음
 ```
 
 Step 5-2부터 캐시 파일을 저장하면 `external_data_cache_files`에는 아래 정보만 기록한다.

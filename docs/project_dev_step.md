@@ -1,7 +1,7 @@
 # AI 주식 분석 서비스 프로젝트 진행 단계
 
-> 현재 상태: **삼성전자 기준 검색 → DART 재무 수집 → 지표 계산 → 규칙 기반 신호등 → Gemini 설명 → 요약분석 화면 → 재무상세 화면 → 관심종목 화면 → AI 추가 질문까지 MVP 흐름 연결 완료**
-> 다음 목표: **종목 검색 → 재무 데이터 수집 → 지표 계산 → AI 신호등 분석 → 화면 표시**까지 MVP 흐름 완성
+> 현재 상태: **삼성전자 기준 검색 → DART 재무 → 키움 주가 → 네이버 뉴스 → 규칙 기반 신호등 → Gemini 설명 → 요약·상세·관심종목·AI 질문 화면까지 MVP 흐름 연결 완료**
+> 다음 목표: **캐시 정책 최종 점검 → 발표 시나리오 정리 → 테스트 종목 5개 확장**
 
 ---
 
@@ -170,7 +170,8 @@ SUPABASE_ANON_KEY=
 DART_API_KEY=
 STOCK_APP_KEY=
 STOCK_SECRET_KEY=
-NEWS_API_KEY=
+NAVER_CLIENT_ID=
+NAVER_CLIENT_SECRET=
 LLM_API_KEY=
 
 DATA_CACHE_ROOT=./data-cache
@@ -188,7 +189,7 @@ API Key: LLM_API_KEY
 
 ```text
 SUPABASE_SERVICE_ROLE_KEY는 절대 프론트엔드에 노출하지 않는다.
-DART_API_KEY, STOCK_APP_KEY, STOCK_SECRET_KEY, NEWS_API_KEY, LLM_API_KEY도 백엔드에서만 사용한다.
+DART_API_KEY, STOCK_APP_KEY, STOCK_SECRET_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, LLM_API_KEY도 백엔드에서만 사용한다.
 프론트엔드는 백엔드 API만 호출한다.
 ```
 
@@ -2096,6 +2097,47 @@ AI가 분석할 내용:
 각 뉴스별 영향 설명이 표시된다.
 ```
 
+현재 완료 내용:
+
+```text
+backend
+- 네이버 비로그인 검색 API 뉴스 엔드포인트 연결
+- NAVER_CLIENT_ID, NAVER_CLIENT_SECRET 백엔드 전용 환경변수 사용
+- 삼성전자 최근 뉴스 수집 worker 추가: npm run news:collect:samsung
+- 네이버 원본 응답을 data-cache/news/005930/YYYY-MM-DD.json에 저장
+- external_data_cache_files news_raw 메타데이터 연결
+- news_articles 기사 메타데이터 upsert
+- stock_news 종목 관련도와 매칭 키워드 저장
+- Gemini 뉴스 묶음 분석 연결
+- news_ai_analyses에 감성, 영향 신호, 영향 기간, 이유, 리스크 키워드 저장
+- Gemini 실패 시 키워드 기반 임시 분류 fallback
+- 유효한 원본 캐시와 기존 llm-news-v1 분석 재사용
+- GET /api/stocks/:stockId/news?limit=5 구현
+- POST /api/stocks/:stockId/news/refresh 구현
+
+frontend
+- 요약분석 화면 최근 뉴스 분석 영역 추가
+- 긍정 / 부정 / 중립 / 혼합 배지 표시
+- AI 영향 요약, 판단 이유, 확인 키워드 표시
+- 기사 원문 링크 표시
+- 뉴스 갱신 버튼 연결
+
+docs
+- docs/api/news.md 추가
+```
+
+검증 결과:
+
+```text
+2026-06-02 삼성전자 네이버 뉴스 검색 API 실 수집 성공
+- 최근 뉴스 5건 저장
+- Gemini 뉴스 영향 분석 5건 저장
+- positive 2건, mixed 1건, neutral 2건 확인
+- data-cache/news/005930/2026-06-02.json 생성
+- GET /api/stocks/1/news?limit=5 응답 5건 확인
+- worker 재실행 시 metadata_cache와 기존 llm-news-v1 분석 재사용
+```
+
 ---
 
 # Phase 18. 캐시 만료 정책 구현
@@ -2238,6 +2280,8 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] ai_analysis_runs 저장 (규칙 기반 + LLM 설명 삼성전자 2024 annual 기준)
 - [x] ai_metric_analysis_items 저장 (규칙 기반 + LLM 설명 삼성전자 2024 annual 기준)
 - [x] ai_analysis_evidences 저장 (규칙 기반 + LLM 설명 삼성전자 2024 annual 기준)
+- [x] news_articles, stock_news 저장 (삼성전자 네이버 뉴스 5건 기준)
+- [x] news_ai_analyses 저장 (Gemini 뉴스 영향 분석 5건 기준)
 
 ## B. 백엔드
 
@@ -2254,6 +2298,8 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] 재무상세 조회 API
 - [x] 관심종목 API (사용자별 기본 데이터 보호 기준)
 - [x] AI 질문 API (백엔드 기본 흐름)
+- [x] 네이버 뉴스 수집 API
+- [x] 뉴스 Gemini 영향 분석 API
 
 ## C. 프론트엔드
 
@@ -2267,13 +2313,14 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] 관심종목 화면
 - [x] AI 질문 UI (이전 질문, 예시 질문, 신규 대화 포함)
 - [x] 주가 그래프
-- [ ] 뉴스 분석 화면
+- [x] 뉴스 분석 화면
 
 ## D. 캐시 / 성능
 
 - [x] data-cache 폴더 구조 생성
 - [x] DART 원본 JSON 저장
 - [x] 주가 장기 데이터 파일 저장 (삼성전자 키움 일봉 600건 기준)
+- [x] 네이버 뉴스 검색 원본 JSON 저장 (삼성전자 최근 뉴스 기준)
 - [x] 캐시 메타데이터 DB 저장
 - [x] expires_at 기반 재수집 여부 판단
 - [x] 같은 요청 반복 시 캐시 재사용
@@ -2291,19 +2338,19 @@ AI가 매수/매도를 대신하지 않는다.
 
 # 바로 다음 작업
 
-현재 상태에서 가장 먼저 해야 할 일은 **Phase 17. 뉴스 분석 기능 구현**이다.
+현재 상태에서 가장 먼저 해야 할 일은 **Phase 18. 캐시 만료 정책 점검 및 발표 준비**다.
 
 바로 다음 순서:
 
 ```text
-1. 뉴스 API 공급원 결정
-2. 삼성전자 최근 뉴스 수집 서비스 구현
-3. 뉴스 메타데이터 DB 저장과 원본 로컬 캐시 연결
-4. 호재 / 악재 / 중립 AI 분석 구현
-5. 뉴스 분석 화면 연결
+1. 주가, 뉴스, DART, LLM 캐시 만료 정책 최종 점검
+2. 삼성전자 전체 데모 흐름 검증
+3. 발표용 사용자 시나리오 정리
+4. 한계점 및 확장 방향 정리
+5. 테스트 종목 5개 확장 준비
 ```
 
-주가 데이터가 필요한 기존 보류 항목인 현재가, 등락률, 그래프, PER, PBR은 완료했다.
+삼성전자 기준 검색, 재무, 주가, 뉴스, AI 설명 흐름은 연결 완료했다.
 
 ---
 

@@ -15,7 +15,8 @@
     "financial:metrics:samsung": "node src/workers/calculateSamsungFinancialMetrics.js",
     "analysis:traffic-light:samsung": "node src/workers/analyzeSamsungTrafficLight.js",
     "analysis:llm-explanation:samsung": "node src/workers/generateSamsungLlmExplanation.js",
-    "prices:collect:samsung": "node src/workers/collectSamsungKiwoomDailyPrices.js"
+    "prices:collect:samsung": "node src/workers/collectSamsungKiwoomDailyPrices.js",
+    "news:collect:samsung": "node src/workers/collectSamsungNaverNews.js"
   },
   "engines": {
     "node": ">=18"

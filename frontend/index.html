@@ -575,6 +575,106 @@
         font-size: 14px;
       }
 
+      .news-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .news-grid[hidden],
+      .news-empty[hidden] {
+        display: none;
+      }
+
+      .news-empty {
+        margin: 0;
+        color: #5f6368;
+        font-size: 14px;
+      }
+
+      .news-card {
+        border: 1px solid #e0e3e7;
+        border-radius: 8px;
+        padding: 15px;
+        background: #ffffff;
+      }
+
+      .news-card-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .news-sentiment {
+        border-radius: 12px;
+        padding: 3px 8px;
+        color: #5f6368;
+        background: #f1f3f4;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .news-sentiment.positive {
+        color: #137333;
+        background: #e6f4ea;
+      }
+
+      .news-sentiment.negative {
+        color: #c5221f;
+        background: #fce8e6;
+      }
+
+      .news-sentiment.mixed {
+        color: #b06000;
+        background: #fef7e0;
+      }
+
+      .news-meta {
+        color: #5f6368;
+        font-size: 12px;
+      }
+
+      .news-card h4 {
+        margin: 10px 0 0;
+        font-size: 15px;
+      }
+
+      .news-card a {
+        color: #202124;
+        text-decoration: none;
+      }
+
+      .news-card a:hover {
+        color: #1a73e8;
+        text-decoration: underline;
+      }
+
+      .news-card p {
+        margin: 8px 0 0;
+        color: #3c4043;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .news-card .news-reason {
+        color: #5f6368;
+      }
+
+      .news-keywords {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .news-keywords span {
+        border-radius: 12px;
+        padding: 3px 8px;
+        color: #5f6368;
+        background: #f8fafd;
+        font-size: 11px;
+      }
+
       .metric-card {
         min-height: 224px;
         border: 1px solid #e0e3e7;
@@ -1234,6 +1334,15 @@
               <p class="price-chart-empty" data-price-chart-empty>최근 주가 데이터를 불러오는 중입니다.</p>
               <svg class="price-chart" data-price-chart viewBox="0 0 760 250" role="img" aria-label="최근 30거래일 종가 그래프" hidden></svg>
             </div>
+          </section>
+
+          <section class="analysis-section" aria-label="뉴스 분석">
+            <div class="section-heading">
+              <h3>최근 뉴스 분석</h3>
+              <button class="ghost-button" type="button" data-news-refresh>뉴스 갱신</button>
+            </div>
+            <p class="news-empty" data-news-empty>최근 뉴스를 불러오는 중입니다.</p>
+            <div class="news-grid" data-news-list hidden></div>
           </section>
 
           <section class="detail-panel" data-metric-detail hidden aria-label="재무 지표 상세">

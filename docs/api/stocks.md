@@ -171,3 +171,27 @@ GET /api/stocks/1/prices?days=30
 ```
 
 키움증권 REST API 수집과 캐시 정책은 `docs/api/stock-prices.md`에 정리했다.
+
+## GET /api/stocks/:stockId/news
+
+저장된 최근 뉴스와 AI 영향 분석을 조회한다.
+
+```http
+GET /api/stocks/1/news?limit=5
+```
+
+## POST /api/stocks/:stockId/news/refresh
+
+네이버 뉴스 검색 API에서 최신 뉴스를 수집하고 Gemini 영향 분석을 저장한다.
+
+```http
+POST /api/stocks/1/news/refresh
+Content-Type: application/json
+
+{
+  "limit": 5,
+  "forceRefresh": true
+}
+```
+
+세부 흐름은 `docs/api/news.md`에 정리했다.

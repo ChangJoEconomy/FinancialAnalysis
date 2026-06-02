@@ -7,6 +7,7 @@ import {
 } from '../services/stockAnalysisService.js';
 import { createSearchHistory } from '../services/userDataService.js';
 import { getRecentStockPrices } from '../services/stockPriceService.js';
+import { collectAndAnalyzeStockNews, getStockNews } from '../services/newsAnalysisService.js';
 import { getOptionalAuthContext, requireAuthContext } from '../utils/authContext.js';
 import { readJsonBody, sendError, sendJson } from '../utils/http.js';
 
@@ -73,6 +74,28 @@ export async function handleStocksRoute(req, res, url) {
         });
         return;
       }
+
+      if (req.method === 'GET' && resource === 'news') {
+        sendJson(res, {
+          data: await getStockNews({
+            stockId,
+            limit: url.searchParams.get('limit') || 5
+          })
+        });
+        return;
+      }
+
+      if (req.method === 'POST' && resource === 'news/refresh') {
+        const body = await readJsonBody(req);
+        sendJson(res, {
+          data: await collectAndAnalyzeStockNews({
+            stockId,
+            limit: body.limit || 5,
+            forceRefresh: Boolean(body.forceRefresh)
+          })
+        });
+        return;
+      }
     }
 
     sendError(res, 404, 'NOT_FOUND', 'Unknown stocks endpoint.');
@@ -87,7 +110,7 @@ export async function handleStocksRoute(req, res, url) {
 }
 
 function matchStockPath(pathname) {
-  const match = pathname.match(/^\/(?:api\/)?stocks\/(\d+)(?:\/(summary|analyze|financials|prices))?$/);
+  const match = pathname.match(/^\/(?:api\/)?stocks\/(\d+)(?:\/(summary|analyze|financials|prices|news|news\/refresh))?$/);
   if (!match) {
     return null;
   }

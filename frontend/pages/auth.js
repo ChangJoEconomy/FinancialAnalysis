@@ -10,6 +10,7 @@ import {
   getPopularStocks,
   getSearchHistories,
   getStockDetail,
+  getStockNews,
   getStockPrices,
   getStockSummary,
   getStoredAccessToken,
@@ -17,6 +18,7 @@ import {
   logout,
   recordStockSearchClick,
   removeFavoriteStock,
+  refreshStockNews,
   searchStocks,
   sendChatMessage,
   signup,
@@ -63,6 +65,9 @@ const pricePeriodEl = document.querySelector('[data-price-period]');
 const priceLatestEl = document.querySelector('[data-price-latest]');
 const priceChangeEl = document.querySelector('[data-price-change]');
 const priceVolumeEl = document.querySelector('[data-price-volume]');
+const newsListEl = document.querySelector('[data-news-list]');
+const newsEmptyEl = document.querySelector('[data-news-empty]');
+const newsRefreshButton = document.querySelector('[data-news-refresh]');
 const metricDetailEl = document.querySelector('[data-metric-detail]');
 const detailTitleEl = document.querySelector('[data-detail-title]');
 const detailMetaEl = document.querySelector('[data-detail-meta]');
@@ -97,6 +102,8 @@ let selectedMetricCode = null;
 let favoriteStocks = [];
 
 const METRIC_LABELS = {
+  PER: '주가수익비율',
+  PBR: '주가순자산비율',
   DEBT_RATIO: '부채비율',
   OPERATING_MARGIN: '영업이익률',
   OPERATING_PROFIT_GROWTH: '영업이익 성장률',
@@ -228,6 +235,10 @@ runAnalysisButton.addEventListener('click', async () => {
 
 refreshAnalysisButton.addEventListener('click', async () => {
   await runSelectedStockAnalysis({ forceRefresh: true });
+});
+
+newsRefreshButton.addEventListener('click', async () => {
+  await refreshSelectedStockNews();
 });
 
 favoriteButton.addEventListener('click', async () => {
@@ -367,7 +378,11 @@ async function handleStockSelection(stock) {
   enterSummaryView(stock);
   setSummaryLoading();
 
-  const tasks = [loadStockSummary(stock.stock_id), loadStockPrices(stock.stock_id)];
+  const tasks = [
+    loadStockSummary(stock.stock_id),
+    loadStockPrices(stock.stock_id),
+    loadStockNews(stock.stock_id)
+  ];
   if (getStoredAccessToken()) {
     tasks.push(saveSearchSelection(stock));
     tasks.push(loadChatSessionsForSelectedStock());
@@ -687,7 +702,8 @@ async function loadSummaryFromHash() {
     setSummaryLoading();
     await Promise.all([
       loadStockSummary(selectedStock.stock_id),
-      loadStockPrices(selectedStock.stock_id)
+      loadStockPrices(selectedStock.stock_id),
+      loadStockNews(selectedStock.stock_id)
     ]);
     if (getStoredAccessToken()) {
       await loadChatSessionsForSelectedStock();
@@ -770,6 +786,85 @@ function setPriceChartLoading() {
   priceChartEl.hidden = true;
   priceChartEmptyEl.hidden = false;
   priceChartEmptyEl.textContent = '최근 주가 데이터를 불러오는 중입니다.';
+}
+
+async function loadStockNews(stockId) {
+  setNewsLoading();
+
+  try {
+    const result = await getStockNews(stockId, 5);
+    renderStockNews(result.data.news || []);
+  } catch {
+    showNewsEmpty('최근 뉴스를 불러오지 못했습니다.');
+  }
+}
+
+async function refreshSelectedStockNews() {
+  if (!selectedStock) {
+    return;
+  }
+
+  setNewsLoading();
+  newsRefreshButton.disabled = true;
+  setStatus('최근 뉴스를 수집하고 AI로 해석하는 중...');
+
+  try {
+    const result = await refreshStockNews(selectedStock.stock_id, {
+      limit: 5,
+      forceRefresh: true
+    });
+    renderStockNews(result.data.news || []);
+    setStatus(result.data.llm?.fallback
+      ? '최근 뉴스를 저장했습니다. AI 연결 문제로 임시 분류를 표시합니다.'
+      : '최근 뉴스와 AI 영향 분석을 갱신했습니다.');
+  } catch (error) {
+    showError(error);
+    showNewsEmpty('최근 뉴스 갱신에 실패했습니다.');
+  } finally {
+    newsRefreshButton.disabled = false;
+  }
+}
+
+function setNewsLoading() {
+  newsListEl.innerHTML = '';
+  newsListEl.hidden = true;
+  newsEmptyEl.hidden = false;
+  newsEmptyEl.textContent = '최근 뉴스를 불러오는 중입니다.';
+}
+
+function showNewsEmpty(message) {
+  newsListEl.innerHTML = '';
+  newsListEl.hidden = true;
+  newsEmptyEl.hidden = false;
+  newsEmptyEl.textContent = message;
+}
+
+function renderStockNews(news) {
+  if (!news.length) {
+    showNewsEmpty('수집된 뉴스가 없습니다. 뉴스 갱신을 실행하세요.');
+    return;
+  }
+
+  newsListEl.innerHTML = news.map((item) => {
+    const article = item.article || {};
+    const analysis = item.analysis || {};
+    const sentiment = analysis.sentiment || 'neutral';
+
+    return `
+      <article class="news-card">
+        <div class="news-card-header">
+          <span class="news-sentiment ${escapeHtml(sentiment)}">${escapeHtml(newsSentimentLabel(sentiment))}</span>
+          <span class="news-meta">${escapeHtml(article.publisher || '출처 확인 필요')} · ${escapeHtml(formatNewsDate(article.published_at))}</span>
+        </div>
+        <h4><a href="${escapeHtml(article.content_url || '#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.title || '제목 없음')}</a></h4>
+        <p>${escapeHtml(analysis.impact_summary || article.summary || '기사 요약이 없습니다.')}</p>
+        <p class="news-reason">${escapeHtml(analysis.reason_text || 'AI 영향 분석을 갱신하면 판단 이유를 확인할 수 있습니다.')}</p>
+        <div class="news-keywords">${(analysis.risk_keywords || []).map((keyword) => `<span>${escapeHtml(keyword)}</span>`).join('')}</div>
+      </article>
+    `;
+  }).join('');
+  newsListEl.hidden = false;
+  newsEmptyEl.hidden = true;
 }
 
 function renderPriceChart(result) {
@@ -1177,6 +1272,33 @@ function formatDateTime(value) {
 function formatChartDate(value) {
   const match = String(value || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
   return match ? `${Number(match[1])}/${Number(match[2])}` : '-';
+}
+
+function formatNewsDate(value) {
+  if (!value) {
+    return '-';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  return date.toLocaleString('ko-KR', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function newsSentimentLabel(sentiment) {
+  return {
+    positive: '긍정',
+    negative: '부정',
+    neutral: '중립',
+    mixed: '혼합'
+  }[sentiment] || '중립';
 }
 
 function formatMetricValue(value, unit) {
