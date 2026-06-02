@@ -1988,6 +1988,48 @@ change_rate
 장기 데이터는 로컬 파일 캐시에서 관리된다.
 ```
 
+현재 완료 내용:
+
+```text
+backend
+- 키움 OAuth 접근 토큰 발급 연결
+- 키움 주식일봉차트조회요청(ka10081) 연결
+- 삼성전자 수집 worker 추가: npm run prices:collect:samsung
+- 키움 원본 응답을 data-cache/prices/005930/daily.json에 저장
+- external_data_cache_files, stock_price_cache_ranges 메타데이터 연결
+- 최근 90거래일을 stock_prices_daily에 upsert
+- GET /api/stocks/:stockId/prices?days=30 구현
+
+frontend
+- 요약분석 화면 최근 주가 영역 추가
+- 최근 종가, 등락률, 거래량 표시
+- 최근 30거래일 종가 반응형 SVG 그래프 표시
+- 수집 데이터가 없을 때 안내 문구 표시
+
+docs
+- docs/api/stock-prices.md 추가
+```
+
+실제 키움 수집 전 준비:
+
+```text
+프로젝트 루트 .env에 STOCK_APP_KEY, STOCK_SECRET_KEY를 저장한다.
+키움 REST API 관리 화면에 백엔드 실행 환경의 공인 IP가 등록되어 있어야 한다.
+```
+
+검증 결과:
+
+```text
+2026-06-02 삼성전자 실전 키움 REST API 일봉 수집 성공
+- ka10081 원본 일봉 600건 로컬 JSON 저장
+- data-cache/prices/005930/daily.json 생성
+- stock_prices_daily 최근 90거래일 저장
+- stock_price_cache_ranges 2023-12-11 ~ 2026-06-02 범위 저장
+- GET /api/stocks/1/prices?days=30 응답 30건 확인
+- 최신 데이터: 2026-06-02 종가 360,500원, 등락률 +3.2951%, 거래량 43,102,071주
+- worker 재실행 시 metadata_cache 재사용 확인
+```
+
 ---
 
 # Phase 17. 뉴스 분석 기능 구현
@@ -2205,14 +2247,14 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] 재무상세 화면
 - [x] 관심종목 화면
 - [x] AI 질문 UI (이전 질문, 예시 질문, 신규 대화 포함)
-- [ ] 주가 그래프
+- [x] 주가 그래프
 - [ ] 뉴스 분석 화면
 
 ## D. 캐시 / 성능
 
 - [x] data-cache 폴더 구조 생성
 - [x] DART 원본 JSON 저장
-- [ ] 주가 장기 데이터 파일 저장
+- [x] 주가 장기 데이터 파일 저장 (삼성전자 키움 일봉 600건 기준)
 - [x] 캐시 메타데이터 DB 저장
 - [x] expires_at 기반 재수집 여부 판단
 - [x] 같은 요청 반복 시 캐시 재사용

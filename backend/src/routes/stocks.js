@@ -6,6 +6,7 @@ import {
   getStockSummary
 } from '../services/stockAnalysisService.js';
 import { createSearchHistory } from '../services/userDataService.js';
+import { getRecentStockPrices } from '../services/stockPriceService.js';
 import { getOptionalAuthContext, requireAuthContext } from '../utils/authContext.js';
 import { readJsonBody, sendError, sendJson } from '../utils/http.js';
 
@@ -62,6 +63,16 @@ export async function handleStocksRoute(req, res, url) {
         });
         return;
       }
+
+      if (req.method === 'GET' && resource === 'prices') {
+        sendJson(res, {
+          data: await getRecentStockPrices({
+            stockId,
+            days: url.searchParams.get('days') || 30
+          })
+        });
+        return;
+      }
     }
 
     sendError(res, 404, 'NOT_FOUND', 'Unknown stocks endpoint.');
@@ -76,7 +87,7 @@ export async function handleStocksRoute(req, res, url) {
 }
 
 function matchStockPath(pathname) {
-  const match = pathname.match(/^\/(?:api\/)?stocks\/(\d+)(?:\/(summary|analyze|financials))?$/);
+  const match = pathname.match(/^\/(?:api\/)?stocks\/(\d+)(?:\/(summary|analyze|financials|prices))?$/);
   if (!match) {
     return null;
   }

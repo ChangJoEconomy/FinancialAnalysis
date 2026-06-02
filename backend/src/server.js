@@ -60,7 +60,8 @@ const server = createServer(async (req, res) => {
         '/api/stocks/1',
         '/api/stocks/1/summary',
         '/api/stocks/1/analyze',
-        '/api/stocks/1/financials?fiscalYear=2024'
+        '/api/stocks/1/financials?fiscalYear=2024',
+        '/api/stocks/1/prices?days=30'
       ]
     });
     return;

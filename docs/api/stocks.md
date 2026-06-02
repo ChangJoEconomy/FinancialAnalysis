@@ -161,3 +161,13 @@ Content-Type: application/json
 ```http
 GET /api/stocks/1/financials?fiscalYear=2024
 ```
+
+## GET /api/stocks/:stockId/prices
+
+요약분석 화면의 그래프에 사용하는 최근 일별 주가를 조회한다.
+
+```http
+GET /api/stocks/1/prices?days=30
+```
+
+키움증권 REST API 수집과 캐시 정책은 `docs/api/stock-prices.md`에 정리했다.

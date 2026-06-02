@@ -90,6 +90,13 @@ export async function getStockFinancials(stockId, fiscalYear = 2024) {
   });
 }
 
+export async function getStockPrices(stockId, days = 30) {
+  const params = new URLSearchParams({ days: String(days) });
+  return request(`/api/stocks/${stockId}/prices?${params.toString()}`, {
+    method: 'GET'
+  });
+}
+
 export async function recordStockSearchClick(payload) {
   return request('/api/stocks/search-click', {
     method: 'POST',

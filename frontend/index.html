@@ -502,6 +502,79 @@
         gap: 12px;
       }
 
+      .price-card {
+        border: 1px solid #e0e3e7;
+        border-radius: 8px;
+        padding: 16px;
+        background: #ffffff;
+      }
+
+      .price-stats {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 10px 18px;
+      }
+
+      .price-stats strong {
+        font-size: 26px;
+      }
+
+      .price-change,
+      .price-volume {
+        color: #5f6368;
+        font-size: 14px;
+      }
+
+      .price-change.up {
+        color: #d93025;
+      }
+
+      .price-change.down {
+        color: #1a73e8;
+      }
+
+      .price-chart {
+        display: block;
+        width: 100%;
+        min-height: 250px;
+        margin-top: 14px;
+      }
+
+      .price-chart[hidden],
+      .price-chart-empty[hidden] {
+        display: none;
+      }
+
+      .price-grid-line {
+        stroke: #edf0f2;
+        stroke-width: 1;
+      }
+
+      .price-chart-area {
+        fill: url(#price-chart-fill);
+      }
+
+      .price-chart-line {
+        fill: none;
+        stroke: #1a73e8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 3;
+      }
+
+      .price-axis-label,
+      .price-date-label {
+        fill: #5f6368;
+        font-size: 11px;
+      }
+
+      .price-chart-empty {
+        margin: 18px 0 4px;
+        color: #5f6368;
+        font-size: 14px;
+      }
+
       .metric-card {
         min-height: 224px;
         border: 1px solid #e0e3e7;
@@ -1145,6 +1218,22 @@
               <span data-analysis-period></span>
             </div>
             <div class="metric-grid" data-metric-grid></div>
+          </section>
+
+          <section class="analysis-section" aria-label="최근 주가">
+            <div class="section-heading">
+              <h3>최근 주가</h3>
+              <span data-price-period>최근 30거래일</span>
+            </div>
+            <div class="price-card">
+              <div class="price-stats">
+                <strong data-price-latest>-</strong>
+                <span class="price-change" data-price-change>-</span>
+                <span class="price-volume">거래량 <span data-price-volume>-</span></span>
+              </div>
+              <p class="price-chart-empty" data-price-chart-empty>최근 주가 데이터를 불러오는 중입니다.</p>
+              <svg class="price-chart" data-price-chart viewBox="0 0 760 250" role="img" aria-label="최근 30거래일 종가 그래프" hidden></svg>
+            </div>
           </section>
 
           <section class="detail-panel" data-metric-detail hidden aria-label="재무 지표 상세">

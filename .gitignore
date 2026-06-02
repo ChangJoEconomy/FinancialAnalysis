@@ -26,7 +26,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Local cache data
-data-cache/*
+data-cache/**
 !data-cache/**/
 !data-cache/**/.gitkeep
 

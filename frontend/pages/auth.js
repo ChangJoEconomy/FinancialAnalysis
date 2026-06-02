@@ -10,6 +10,7 @@ import {
   getPopularStocks,
   getSearchHistories,
   getStockDetail,
+  getStockPrices,
   getStockSummary,
   getStoredAccessToken,
   login,
@@ -56,6 +57,12 @@ const reasonTextEl = document.querySelector('[data-reason-text]');
 const cautionTextEl = document.querySelector('[data-caution-text]');
 const analysisPeriodEl = document.querySelector('[data-analysis-period]');
 const metricGridEl = document.querySelector('[data-metric-grid]');
+const priceChartEl = document.querySelector('[data-price-chart]');
+const priceChartEmptyEl = document.querySelector('[data-price-chart-empty]');
+const pricePeriodEl = document.querySelector('[data-price-period]');
+const priceLatestEl = document.querySelector('[data-price-latest]');
+const priceChangeEl = document.querySelector('[data-price-change]');
+const priceVolumeEl = document.querySelector('[data-price-volume]');
 const metricDetailEl = document.querySelector('[data-metric-detail]');
 const detailTitleEl = document.querySelector('[data-detail-title]');
 const detailMetaEl = document.querySelector('[data-detail-meta]');
@@ -360,7 +367,7 @@ async function handleStockSelection(stock) {
   enterSummaryView(stock);
   setSummaryLoading();
 
-  const tasks = [loadStockSummary(stock.stock_id)];
+  const tasks = [loadStockSummary(stock.stock_id), loadStockPrices(stock.stock_id)];
   if (getStoredAccessToken()) {
     tasks.push(saveSearchSelection(stock));
     tasks.push(loadChatSessionsForSelectedStock());
@@ -678,7 +685,10 @@ async function loadSummaryFromHash() {
     startNewChat();
     enterSummaryView(selectedStock);
     setSummaryLoading();
-    await loadStockSummary(selectedStock.stock_id);
+    await Promise.all([
+      loadStockSummary(selectedStock.stock_id),
+      loadStockPrices(selectedStock.stock_id)
+    ]);
     if (getStoredAccessToken()) {
       await loadChatSessionsForSelectedStock();
     } else {
@@ -737,6 +747,103 @@ function setSummaryLoading() {
   analysisPeriodEl.textContent = '';
   metricGridEl.innerHTML = '<span class="loading-text">주요 지표를 불러오는 중입니다.</span>';
   closeMetricDetail({ rerender: false });
+}
+
+async function loadStockPrices(stockId) {
+  setPriceChartLoading();
+
+  try {
+    const result = await getStockPrices(stockId, 30);
+    renderPriceChart(result.data);
+  } catch {
+    showPriceChartEmpty('최근 주가 데이터를 불러오지 못했습니다.');
+  }
+}
+
+function setPriceChartLoading() {
+  priceLatestEl.textContent = '-';
+  priceChangeEl.textContent = '-';
+  priceChangeEl.className = 'price-change';
+  priceVolumeEl.textContent = '-';
+  pricePeriodEl.textContent = '최근 30거래일';
+  priceChartEl.innerHTML = '';
+  priceChartEl.hidden = true;
+  priceChartEmptyEl.hidden = false;
+  priceChartEmptyEl.textContent = '최근 주가 데이터를 불러오는 중입니다.';
+}
+
+function renderPriceChart(result) {
+  const prices = result?.prices || [];
+  if (!prices.length) {
+    showPriceChartEmpty('수집된 최근 주가 데이터가 없습니다. 키움 일봉 수집을 먼저 실행하세요.');
+    return;
+  }
+
+  const latest = result.latest || prices.at(-1);
+  const changeRate = toOptionalNumber(latest.change_rate);
+  priceLatestEl.textContent = `${formatNumber(latest.close_price, 0)}원`;
+  priceChangeEl.textContent = changeRate === null ? '-' : `${changeRate > 0 ? '+' : ''}${formatNumber(changeRate, 2)}%`;
+  priceChangeEl.className = `price-change ${changeRate > 0 ? 'up' : changeRate < 0 ? 'down' : ''}`;
+  priceVolumeEl.textContent = `${formatNumber(latest.volume, 0)}주`;
+  pricePeriodEl.textContent = `${formatChartDate(prices[0].trade_date)} - ${formatChartDate(prices.at(-1).trade_date)} · 종가 기준`;
+  priceChartEl.innerHTML = buildPriceChartSvg(prices);
+  priceChartEl.hidden = false;
+  priceChartEmptyEl.hidden = true;
+}
+
+function showPriceChartEmpty(message) {
+  priceLatestEl.textContent = '-';
+  priceChangeEl.textContent = '-';
+  priceChangeEl.className = 'price-change';
+  priceVolumeEl.textContent = '-';
+  pricePeriodEl.textContent = '최근 30거래일';
+  priceChartEl.innerHTML = '';
+  priceChartEl.hidden = true;
+  priceChartEmptyEl.hidden = false;
+  priceChartEmptyEl.textContent = message;
+}
+
+function buildPriceChartSvg(prices) {
+  const width = 760;
+  const height = 250;
+  const padding = { top: 18, right: 72, bottom: 32, left: 12 };
+  const values = prices.map((price) => Number(price.close_price));
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const spread = rawMax - rawMin || Math.max(rawMax * 0.02, 1);
+  const min = rawMin - spread * 0.12;
+  const max = rawMax + spread * 0.12;
+  const graphWidth = width - padding.left - padding.right;
+  const graphHeight = height - padding.top - padding.bottom;
+  const x = (index) => padding.left + (prices.length === 1 ? graphWidth / 2 : (index / (prices.length - 1)) * graphWidth);
+  const y = (value) => padding.top + ((max - value) / (max - min)) * graphHeight;
+  const points = prices.map((price, index) => `${x(index).toFixed(2)},${y(Number(price.close_price)).toFixed(2)}`);
+  const areaPath = [
+    `M ${x(0).toFixed(2)} ${height - padding.bottom}`,
+    ...points.map((point) => `L ${point.replace(',', ' ')}`),
+    `L ${x(prices.length - 1).toFixed(2)} ${height - padding.bottom}`,
+    'Z'
+  ].join(' ');
+  const ticks = [rawMax, (rawMax + rawMin) / 2, rawMin];
+  const dateIndexes = [...new Set([0, Math.floor((prices.length - 1) / 2), prices.length - 1])];
+
+  return `
+    <defs>
+      <linearGradient id="price-chart-fill" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#1a73e8" stop-opacity="0.2"></stop>
+        <stop offset="100%" stop-color="#1a73e8" stop-opacity="0"></stop>
+      </linearGradient>
+    </defs>
+    ${ticks.map((tick) => `
+      <line class="price-grid-line" x1="${padding.left}" x2="${width - padding.right}" y1="${y(tick)}" y2="${y(tick)}"></line>
+      <text class="price-axis-label" x="${width - padding.right + 10}" y="${y(tick) + 4}">${escapeHtml(formatNumber(tick, 0))}원</text>
+    `).join('')}
+    <path class="price-chart-area" d="${areaPath}"></path>
+    <polyline class="price-chart-line" points="${points.join(' ')}"></polyline>
+    ${dateIndexes.map((index) => `
+      <text class="price-date-label" x="${x(index)}" y="${height - 8}" text-anchor="${index === 0 ? 'start' : index === prices.length - 1 ? 'end' : 'middle'}">${escapeHtml(formatChartDate(prices[index].trade_date))}</text>
+    `).join('')}
+  `;
 }
 
 function renderSummary(summary) {
@@ -1065,6 +1172,11 @@ function formatDateTime(value) {
     hour: '2-digit',
     minute: '2-digit'
   });
+}
+
+function formatChartDate(value) {
+  const match = String(value || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
+  return match ? `${Number(match[1])}/${Number(match[2])}` : '-';
 }
 
 function formatMetricValue(value, unit) {
