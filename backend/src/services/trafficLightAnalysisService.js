@@ -11,6 +11,7 @@ import {
   upsertAnalysisRun,
   upsertMetricAnalysisItem
 } from '../repositories/aiAnalysisRepository.js';
+import { buildCacheExpiresAt } from './cachePolicy.js';
 
 const PROMPT_VERSION = 'rules-financial-v1';
 const MODEL_NAME = 'rules-v1';
@@ -206,7 +207,7 @@ export async function runFinancialTrafficLightAnalysis({
     source_data_hash: sourceDataHash,
     model_name: MODEL_NAME,
     prompt_version: PROMPT_VERSION,
-    expires_at: addDays(new Date(), 30).toISOString()
+    expires_at: buildCacheExpiresAt('financial_analysis')
   });
 
   const savedItems = [];
@@ -461,12 +462,6 @@ function countSignal(items, signal) {
 function average(values) {
   const finiteValues = values.filter((value) => Number.isFinite(value));
   return finiteValues.reduce((sum, value) => sum + value, 0) / finiteValues.length;
-}
-
-function addDays(date, days) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
 }
 
 function nullableNumber(value) {

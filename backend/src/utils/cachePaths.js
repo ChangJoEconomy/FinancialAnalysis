@@ -36,6 +36,15 @@ export function cacheFileExists(filePath) {
   return existsSync(filePath);
 }
 
+export function isCacheFileFresh(filePath, maxAgeMs, now = new Date()) {
+  if (!existsSync(filePath)) {
+    return false;
+  }
+
+  const stats = statSync(filePath);
+  return now.getTime() - stats.mtimeMs <= maxAgeMs;
+}
+
 export function getCacheFileInfo(filePath) {
   if (!existsSync(filePath)) {
     throw new Error(`Cache file does not exist: ${filePath}`);

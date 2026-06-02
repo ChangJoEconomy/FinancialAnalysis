@@ -1,7 +1,5 @@
 import { createHash } from 'node:crypto';
 import {
-  cacheFileExists,
-  readJsonCacheFile,
   resolveCachePath,
   writeJsonCacheFile
 } from '../utils/cachePaths.js';
@@ -14,16 +12,16 @@ import {
   upsertStockNews
 } from '../repositories/newsRepository.js';
 import {
-  getFreshCacheByLogicalKey,
+  readFreshJsonCacheByLogicalKey,
   saveJsonCacheWithMetadata
 } from './cacheMetadataService.js';
+import { buildCacheExpiresAt, getCacheTtlMs } from './cachePolicy.js';
 import { generateGeminiJson } from './geminiService.js';
 
 const NAVER_NEWS_ENDPOINT = 'https://openapi.naver.com/v1/search/news.json';
 const NEWS_PROMPT_VERSION = 'llm-news-v1';
 const DEFAULT_LIMIT = 5;
 const DEFAULT_SEARCH_DISPLAY = 10;
-const CACHE_HOURS = 6;
 
 export async function getStockNews({ stockId, limit = DEFAULT_LIMIT }) {
   const stock = await requireStock(stockId);
@@ -128,7 +126,7 @@ export async function collectNaverNewsRaw({ stock, display = DEFAULT_SEARCH_DISP
       rowCount: data.items?.length || 0,
       periodStart: date,
       periodEnd: date,
-      expiresAt: addHours(new Date(), CACHE_HOURS).toISOString(),
+      expiresAt: buildCacheExpiresAt('news_raw'),
       metadata: {
         stock_code: stock.stock_code,
         query: stock.company_name_ko,
@@ -390,26 +388,11 @@ function calculateRelevance(stock, article) {
 }
 
 async function tryReadFreshCache({ logicalKey, absoluteCachePath }) {
-  try {
-    const metadata = await getFreshCacheByLogicalKey(logicalKey);
-    if (metadata && cacheFileExists(absoluteCachePath)) {
-      return {
-        source: 'metadata_cache',
-        cacheMetadata: metadata,
-        data: readJsonCacheFile(absoluteCachePath)
-      };
-    }
-  } catch {
-    if (cacheFileExists(absoluteCachePath)) {
-      return {
-        source: 'file_cache',
-        cacheMetadata: null,
-        data: readJsonCacheFile(absoluteCachePath)
-      };
-    }
-  }
-
-  return null;
+  return readFreshJsonCacheByLogicalKey({
+    logicalKey,
+    absolutePath: absoluteCachePath,
+    fallbackTtlMs: getCacheTtlMs('news_raw')
+  });
 }
 
 async function requireStock(stockId) {
@@ -468,10 +451,6 @@ function formatDateInSeoul(date) {
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
-}
-
-function addHours(date, hours) {
-  return new Date(date.getTime() + 1000 * 60 * 60 * hours);
 }
 
 function hash(value) {

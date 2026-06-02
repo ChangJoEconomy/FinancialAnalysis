@@ -1,10 +1,11 @@
 import { findStockById } from '../repositories/stockRepository.js';
-import { saveJsonCacheWithMetadata } from './cacheMetadataService.js';
-import { getFreshCacheByLogicalKey } from './cacheMetadataService.js';
 import {
-  cacheFileExists,
+  readFreshJsonCacheByLogicalKey,
+  saveJsonCacheWithMetadata
+} from './cacheMetadataService.js';
+import { buildCacheExpiresAt, getCacheTtlMs } from './cachePolicy.js';
+import {
   getCacheFileInfo,
-  readJsonCacheFile,
   resolveCachePath,
   toProjectRelativePath,
   writeJsonCacheFile
@@ -50,7 +51,7 @@ export async function collectDartFinancialRaw({ stockId, fiscalYear, reportType 
     reportCode: report.reportCode
   });
 
-  const expiresAt = buildDefaultExpiresAt();
+  const expiresAt = buildCacheExpiresAt('dart_raw');
   let cacheMetadata = null;
   let metadataWarning = null;
 
@@ -149,23 +150,21 @@ function resolveReportType(reportType) {
 }
 
 async function tryReadFreshCache(logicalKey, absoluteCachePath) {
-  try {
-    const metadata = await getFreshCacheByLogicalKey(logicalKey);
-    if (metadata && cacheFileExists(absoluteCachePath)) {
-      const cachedData = readJsonCacheFile(absoluteCachePath);
-      if (isDartFinancialPayload(cachedData)) {
-        return buildCacheHitResult({ logicalKey, absoluteCachePath, metadata, data: cachedData, source: 'metadata_cache' });
-      }
-    }
-  } catch {
-    // Supabase metadata can be unavailable in local development; fall back to file cache.
-  }
+  const cached = await readFreshJsonCacheByLogicalKey({
+    logicalKey,
+    absolutePath: absoluteCachePath,
+    fallbackTtlMs: getCacheTtlMs('dart_raw'),
+    validate: isDartFinancialPayload
+  });
 
-  if (cacheFileExists(absoluteCachePath)) {
-    const cachedData = readJsonCacheFile(absoluteCachePath);
-    if (isDartFinancialPayload(cachedData)) {
-      return buildCacheHitResult({ logicalKey, absoluteCachePath, metadata: null, data: cachedData, source: 'file_cache' });
-    }
+  if (cached) {
+    return buildCacheHitResult({
+      logicalKey,
+      absoluteCachePath,
+      metadata: cached.cacheMetadata,
+      data: cached.data,
+      source: cached.source
+    });
   }
 
   return null;
@@ -190,8 +189,4 @@ function buildCacheHitResult({ logicalKey, absoluteCachePath, metadata, data, so
 
 function isDartFinancialPayload(data) {
   return data && data.status === '000' && Array.isArray(data.list);
-}
-
-function buildDefaultExpiresAt() {
-  return new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
 }

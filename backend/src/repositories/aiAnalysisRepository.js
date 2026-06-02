@@ -59,12 +59,22 @@ export async function findAnalysisRunBySource({ stockId, analysisType, sourceDat
   return rows[0] || null;
 }
 
-export async function findLatestAnalysisRun({ stockId, analysisType, promptVersion, settingId = null, freshOnly = false }) {
+export async function findLatestAnalysisRun({
+  stockId,
+  analysisType,
+  promptVersion,
+  settingId = null,
+  freshOnly = false,
+  maxAgeMs = null
+}) {
   const settingFilter = settingId
     ? `&setting_id=eq.${Number(settingId)}`
     : '&setting_id=is.null';
   const expiresFilter = freshOnly
     ? `&or=${encodeURIComponent(`(expires_at.is.null,expires_at.gt.${new Date().toISOString()})`)}`
+    : '';
+  const createdFilter = freshOnly && maxAgeMs
+    ? `&created_at=gt.${new Date(Date.now() - maxAgeMs).toISOString()}`
     : '';
 
   const rows = await requestSupabaseRest(
@@ -74,6 +84,7 @@ export async function findLatestAnalysisRun({ stockId, analysisType, promptVersi
       `&prompt_version=eq.${encodeURIComponent(promptVersion)}` +
       settingFilter +
       expiresFilter +
+      createdFilter +
       '&order=created_at.desc' +
       '&limit=1'
   );

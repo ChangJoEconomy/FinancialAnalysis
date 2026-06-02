@@ -4,6 +4,7 @@ import {
   getFreshCacheByLogicalKey,
   saveJsonCacheWithMetadata
 } from '../services/cacheMetadataService.js';
+import { buildCacheExpiresAt } from '../services/cachePolicy.js';
 
 loadEnv();
 
@@ -11,7 +12,7 @@ const stockId = 1;
 const stockCode = '005930';
 const fiscalYear = 2024;
 const logicalKey = buildDartAnnualLogicalKey({ stockCode, fiscalYear });
-const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
+const expiresAt = buildCacheExpiresAt('dart_raw');
 
 let existingCache = null;
 

@@ -6,17 +6,16 @@ import {
   upsertStockPricesDaily
 } from '../repositories/stockPriceRepository.js';
 import {
-  cacheFileExists,
   getCacheFileInfo,
-  readJsonCacheFile,
   resolveCachePath,
   toProjectRelativePath,
   writeJsonCacheFile
 } from '../utils/cachePaths.js';
 import {
-  getFreshCacheByLogicalKey,
+  readFreshJsonCacheByLogicalKey,
   saveJsonCacheWithMetadata
 } from './cacheMetadataService.js';
+import { buildCacheExpiresAt, getCacheTtlMs } from './cachePolicy.js';
 
 const KIWOOM_DAILY_CHART_API_ID = 'ka10081';
 const KIWOOM_DAILY_CHART_ENDPOINT = '/api/dostk/chart';
@@ -103,7 +102,7 @@ export async function collectKiwoomDailyPrices({
       rowCount: normalizedPrices.length,
       periodStart,
       periodEnd,
-      expiresAt: buildDefaultExpiresAt(),
+      expiresAt: buildCacheExpiresAt('price_daily'),
       metadata: {
         stock_code: stock.stock_code,
         api_id: KIWOOM_DAILY_CHART_API_ID,
@@ -165,7 +164,7 @@ export async function collectKiwoomStockBasicInfo({ stockId, forceRefresh = fals
       data: rawData,
       periodStart: data.tradeDate,
       periodEnd: data.tradeDate,
-      expiresAt: buildDefaultExpiresAt(),
+      expiresAt: buildCacheExpiresAt('stock_basic_info'),
       metadata: {
         stock_code: stock.stock_code,
         api_id: KIWOOM_STOCK_BASIC_INFO_API_ID
@@ -424,30 +423,15 @@ async function tryReadFreshPriceCache({ logicalKey, absoluteCachePath }) {
 }
 
 async function tryReadFreshCache({ logicalKey, absoluteCachePath }) {
-  let metadataLookupFailed = false;
+  const cacheType = logicalKey.includes(':stock_basic_info:')
+    ? 'stock_basic_info'
+    : 'price_daily';
 
-  try {
-    const metadata = await getFreshCacheByLogicalKey(logicalKey);
-    if (metadata && cacheFileExists(absoluteCachePath)) {
-      return {
-        source: 'metadata_cache',
-        cacheMetadata: metadata,
-        data: readJsonCacheFile(absoluteCachePath)
-      };
-    }
-  } catch {
-    metadataLookupFailed = true;
-  }
-
-  if (metadataLookupFailed && cacheFileExists(absoluteCachePath)) {
-    return {
-      source: 'file_cache',
-      cacheMetadata: null,
-      data: readJsonCacheFile(absoluteCachePath)
-    };
-  }
-
-  return null;
+  return readFreshJsonCacheByLogicalKey({
+    logicalKey,
+    absolutePath: absoluteCachePath,
+    fallbackTtlMs: getCacheTtlMs(cacheType)
+  });
 }
 
 function extractDailyChartRows(rawData) {
@@ -539,10 +523,6 @@ function shiftDate(dateText, days) {
   const date = new Date(`${dateText}T12:00:00+09:00`);
   date.setUTCDate(date.getUTCDate() + days);
   return formatDateInSeoul(date);
-}
-
-function buildDefaultExpiresAt() {
-  return new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString();
 }
 
 function getKiwoomApiBaseUrl() {

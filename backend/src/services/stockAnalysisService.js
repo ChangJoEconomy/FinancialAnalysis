@@ -16,6 +16,7 @@ import { findStockById } from '../repositories/stockRepository.js';
 import { calculateAndSaveFinancialMetrics } from './financialMetricService.js';
 import { generateAndSaveFinancialLlmExplanation } from './llmExplanationService.js';
 import { ensureDefaultAnalysisSettings } from './userDataService.js';
+import { getCacheTtlMs } from './cachePolicy.js';
 
 const LLM_PROMPT_VERSION = 'llm-financial-v1';
 const ANALYSIS_TYPE = 'financial';
@@ -68,7 +69,8 @@ export async function analyzeStock({
     analysisType: ANALYSIS_TYPE,
     promptVersion: LLM_PROMPT_VERSION,
     settingId: setting?.setting_id || null,
-    freshOnly: true
+    freshOnly: true,
+    maxAgeMs: getCacheTtlMs('financial_analysis')
   });
 
   if (cachedAnalysis && !payload.forceRefresh) {

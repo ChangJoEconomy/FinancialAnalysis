@@ -3,7 +3,10 @@ import {
   upsertCacheMetadata
 } from '../repositories/cacheMetadataRepository.js';
 import {
+  cacheFileExists,
   getCacheFileInfo,
+  isCacheFileFresh,
+  readJsonCacheFile,
   resolveCachePath,
   toProjectRelativePath,
   writeJsonCacheFile
@@ -56,6 +59,32 @@ export async function getFreshCacheByLogicalKey(logicalKey) {
   return findFreshCacheMetadata(logicalKey);
 }
 
+export async function readFreshJsonCacheByLogicalKey({
+  logicalKey,
+  absolutePath,
+  fallbackTtlMs,
+  validate = () => true
+}) {
+  let metadata;
+
+  try {
+    metadata = await getFreshCacheByLogicalKey(logicalKey);
+  } catch {
+    return readFallbackFileCache({ absolutePath, fallbackTtlMs, validate });
+  }
+
+  if (!metadata || !cacheFileExists(absolutePath)) {
+    return null;
+  }
+
+  return readJsonCache({
+    absolutePath,
+    source: 'metadata_cache',
+    cacheMetadata: metadata,
+    validate
+  });
+}
+
 export function inspectExistingCacheFile(cachePathSegments) {
   const absolutePath = resolveCachePath(...cachePathSegments);
   const fileInfo = getCacheFileInfo(absolutePath);
@@ -64,4 +93,34 @@ export function inspectExistingCacheFile(cachePathSegments) {
     ...fileInfo,
     filePath: toProjectRelativePath(fileInfo.filePath)
   };
+}
+
+function readFallbackFileCache({ absolutePath, fallbackTtlMs, validate }) {
+  if (!isCacheFileFresh(absolutePath, fallbackTtlMs)) {
+    return null;
+  }
+
+  return readJsonCache({
+    absolutePath,
+    source: 'file_cache',
+    cacheMetadata: null,
+    validate
+  });
+}
+
+function readJsonCache({ absolutePath, source, cacheMetadata, validate }) {
+  try {
+    const data = readJsonCacheFile(absolutePath);
+    if (!validate(data)) {
+      return null;
+    }
+
+    return {
+      source,
+      cacheMetadata,
+      data
+    };
+  } catch {
+    return null;
+  }
 }

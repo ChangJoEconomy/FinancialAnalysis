@@ -73,5 +73,8 @@ metadata
 
 ```bash
 cd backend
+npm run cache:policy:check
 npm run cache:demo:samsung-dart
 ```
+
+캐시 TTL과 장애 시 로컬 파일 대체 정책은 `docs/api/cache.md`에 정리했다.
