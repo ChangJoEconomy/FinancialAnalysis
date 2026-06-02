@@ -32,10 +32,15 @@ const signupForm = document.querySelector('[data-signup-form]');
 const loginForm = document.querySelector('[data-login-form]');
 const meButton = document.querySelector('[data-me-button]');
 const logoutButton = document.querySelector('[data-logout-button]');
-const authToggleButton = document.querySelector('[data-auth-toggle]');
+const topLoginButton = document.querySelector('.top-login-button');
+const authSummaryEl = document.querySelector('[data-auth-summary]');
+const authScreen = document.querySelector('[data-auth-screen]');
+const authViews = document.querySelectorAll('[data-auth-view]');
+const authScreenOpenButtons = document.querySelectorAll('[data-auth-screen-open]');
+const authCloseButtons = document.querySelectorAll('[data-auth-close]');
+const authScreenStatusEl = document.querySelector('[data-auth-screen-status]');
+const homeOpenButton = document.querySelector('[data-home-open]');
 const favoritesOpenButton = document.querySelector('[data-favorites-open]');
-const authCloseButton = document.querySelector('[data-auth-close]');
-const authPanel = document.querySelector('[data-auth-panel]');
 const stockSearchForm = document.querySelector('[data-stock-search-form]');
 const stockSearchInput = document.querySelector('[data-stock-search-input]');
 const stockSearchResultsEl = document.querySelector('[data-stock-search-results]');
@@ -45,6 +50,7 @@ const favoritesSectionEl = document.querySelector('[data-favorites-section]');
 const favoriteListEl = document.querySelector('[data-favorite-list]');
 const favoriteCountEl = document.querySelector('[data-favorite-count]');
 const homeDashboard = document.querySelector('[data-home-dashboard]');
+const favoritesView = document.querySelector('[data-favorites-view]');
 const summaryPanel = document.querySelector('[data-summary-panel]');
 const summaryNameEl = document.querySelector('[data-summary-name]');
 const summaryMetaEl = document.querySelector('[data-summary-meta]');
@@ -100,6 +106,7 @@ let chatSessionId = null;
 let chatSessions = [];
 let selectedMetricCode = null;
 let favoriteStocks = [];
+let authReturnPath = '/home';
 
 const METRIC_LABELS = {
   PER: '주가수익비율',
@@ -113,44 +120,51 @@ const METRIC_LABELS = {
 
 signupForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  setStatus('회원가입 요청 중...');
+  setAuthStatus('회원가입 요청 중...');
 
   try {
     const payload = formToObject(signupForm);
     const result = await signup(payload);
     handleAuthResult(result, '회원가입이 완료되었습니다.');
   } catch (error) {
-    showError(error);
+    showAuthError(error);
   }
 });
 
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  setStatus('로그인 요청 중...');
+  setAuthStatus('로그인 요청 중...');
 
   try {
     const payload = formToObject(loginForm);
     const result = await login(payload);
     handleAuthResult(result, '로그인되었습니다.');
   } catch (error) {
-    showError(error);
+    showAuthError(error);
   }
 });
 
 meButton.addEventListener('click', async () => {
+  if (!getStoredAccessToken()) {
+    openAuthScreen('login');
+    setAuthStatus('내 정보를 확인하려면 로그인하세요.');
+    return;
+  }
+
   setStatus('사용자 정보를 확인하는 중...');
 
   try {
     const result = await getMe();
     renderUser(result.user);
-    authPanel.hidden = false;
+    openAuthScreen('account');
+    setAuthStatus('로그인 상태입니다.');
     setStatus('로그인 상태입니다.');
   } catch (error) {
     clearAccessToken();
     renderUser(null);
     renderFavoriteStocks([]);
-    authPanel.hidden = false;
-    showError(error);
+    openAuthScreen('login');
+    showAuthError(error);
   }
 });
 
@@ -163,22 +177,31 @@ logoutButton.addEventListener('click', async () => {
     renderSearchHistories([]);
     renderFavoriteStocks([]);
     resetChatWorkspace();
+    closeAuthScreen();
     setStatus('로그아웃되었습니다.');
   } catch (error) {
     showError(error);
   }
 });
 
-authToggleButton.addEventListener('click', () => {
-  authPanel.hidden = !authPanel.hidden;
+homeOpenButton.addEventListener('click', () => {
+  navigateTo('/home').catch(showError);
+});
+
+authScreenOpenButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    openAuthScreen(button.dataset.authScreenOpen);
+  });
 });
 
 favoritesOpenButton.addEventListener('click', async () => {
   await openFavorites();
 });
 
-authCloseButton.addEventListener('click', () => {
-  authPanel.hidden = true;
+authCloseButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    closeAuthScreen();
+  });
 });
 
 stockSearchForm.addEventListener('submit', async (event) => {
@@ -210,7 +233,7 @@ popularStocksEl.addEventListener('click', async (event) => {
 });
 
 summaryCloseButton.addEventListener('click', () => {
-  closeSummary();
+  navigateTo('/home').catch(showError);
 });
 
 metricGridEl.addEventListener('click', (event) => {
@@ -247,7 +270,8 @@ favoriteButton.addEventListener('click', async () => {
   }
 
   if (!getStoredAccessToken()) {
-    authPanel.hidden = false;
+    openAuthScreen('login');
+    setAuthStatus('관심종목을 추가하려면 로그인하세요.');
     setStatus('관심종목을 추가하려면 로그인하세요.');
     return;
   }
@@ -325,9 +349,18 @@ chatSessionListEl.addEventListener('click', async (event) => {
   await loadChatSession(button.dataset.chatSessionId);
 });
 
+window.addEventListener('popstate', () => {
+  applyRoute().catch(showError);
+});
+
+window.addEventListener('hashchange', () => {
+  applyRoute().catch(showError);
+});
+
 await initializeHome();
 
 async function initializeHome() {
+  renderUser(null);
   await loadPopularStocks();
 
   if (getStoredAccessToken()) {
@@ -344,7 +377,7 @@ async function initializeHome() {
     }
   }
 
-  await loadSummaryFromHash();
+  await applyRoute();
 }
 
 async function runStockSearch(query) {
@@ -396,13 +429,15 @@ async function handleStockSelection(stock) {
 function handleAuthResult(result, message) {
   storeAccessToken(result.accessToken);
   renderUser(result.user);
-  authPanel.hidden = true;
+  const destination = authReturnPath;
+  closeAuthScreen({ restoreRoute: false });
   loadSearchHistories();
   loadFavoriteStocks().catch(showError);
   if (selectedStock) {
     loadChatSessionsForSelectedStock().catch(showError);
   }
   setStatus(message);
+  navigateTo(destination).catch(showError);
 }
 
 function formToObject(form) {
@@ -412,16 +447,20 @@ function formToObject(form) {
 function renderUser(user) {
   if (!user) {
     userEl.textContent = '로그인된 사용자가 없습니다.';
+    authSummaryEl.textContent = '로그인이 필요합니다.';
+    topLoginButton.hidden = false;
+    logoutButton.hidden = true;
     return;
   }
 
-  userEl.textContent = JSON.stringify({
-    user_id: user.user_id,
-    email: user.email,
-    nickname: user.nickname,
-    auth_user_id: user.provider_user_id,
-    last_login_at: user.last_login_at
-  }, null, 2);
+  userEl.innerHTML = `
+    <strong>${escapeHtml(user.nickname || user.email)}</strong>
+    <span>${escapeHtml(user.email)}</span>
+    <span>최근 로그인: ${escapeHtml(formatDateTime(user.last_login_at))}</span>
+  `;
+  authSummaryEl.textContent = `${user.nickname || user.email}님`;
+  topLoginButton.hidden = true;
+  logoutButton.hidden = false;
 }
 
 function renderStockResults(results) {
@@ -488,15 +527,19 @@ function renderPopularStocks(stocks) {
   `).join('');
 }
 
-async function openFavorites() {
+async function openFavorites({ updateRoute = true } = {}) {
   if (!getStoredAccessToken()) {
-    authPanel.hidden = false;
+    authReturnPath = '/favorites';
+    openAuthScreen('login');
+    setAuthStatus('관심종목을 확인하려면 로그인하세요.');
     setStatus('관심종목을 확인하려면 로그인하세요.');
     return;
   }
 
-  if (!summaryPanel.hidden) {
-    closeSummary();
+  closeAuthScreen({ restoreRoute: false });
+  showFavoritesView();
+  if (updateRoute) {
+    setRoutePath('/favorites');
   }
 
   await loadFavoriteStocks().catch(showError);
@@ -653,25 +696,30 @@ function enterSummaryView(stock) {
   summaryNameEl.textContent = `${stock.company_name_ko} 요약분석`;
   summaryMetaEl.textContent = `${stock.stock_code} · ${stock.ticker} · ${stock.market} · ${stock.industry_name || '업종 정보 없음'}`;
   document.body.classList.add('summary-mode');
+  document.body.classList.remove('favorites-mode');
   homeDashboard.hidden = true;
+  favoritesView.hidden = true;
   summaryPanel.hidden = false;
   updateFavoriteButtonState();
   stockSearchResultsEl.innerHTML = '';
-  window.location.hash = `summary-${stock.stock_id}`;
+  setRoutePath(`/summary/${stock.stock_id}`);
   summaryPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function closeSummary() {
+function closeSummary({ updateRoute = true } = {}) {
   selectedStock = null;
   selectedSummary = null;
   chatSessionId = null;
   chatSessions = [];
-  document.body.classList.remove('summary-mode');
+  document.body.classList.remove('summary-mode', 'favorites-mode');
   summaryPanel.hidden = true;
   homeDashboard.hidden = false;
+  favoritesView.hidden = true;
   resetChatWorkspace();
   closeMetricDetail();
-  window.location.hash = '';
+  if (updateRoute) {
+    setRoutePath('/home');
+  }
 }
 
 async function saveSearchSelection(stock) {
@@ -687,14 +735,9 @@ async function saveSearchSelection(stock) {
   }
 }
 
-async function loadSummaryFromHash() {
-  const match = window.location.hash.match(/^#summary-(\d+)$/);
-  if (!match) {
-    return;
-  }
-
+async function loadSummaryFromRoute(stockId) {
   try {
-    const result = await getStockDetail(match[1]);
+    const result = await getStockDetail(stockId);
     selectedStock = result.data;
     chatSessions = [];
     startNewChat();
@@ -1167,7 +1210,8 @@ async function askQuestion(rawQuestion) {
   }
 
   if (!getStoredAccessToken()) {
-    authPanel.hidden = false;
+    openAuthScreen('login');
+    setAuthStatus('AI 질문을 보내려면 로그인하세요.');
     setStatus('AI 질문을 보내려면 로그인하세요.');
     return;
   }
@@ -1216,8 +1260,128 @@ function setStatus(message) {
   statusEl.textContent = message;
 }
 
+function openAuthScreen(mode = 'login') {
+  const resolvedMode = mode === 'account' && !getStoredAccessToken() ? 'login' : mode;
+
+  if (!isAuthPath(window.location.pathname)) {
+    authReturnPath = normalizePath();
+  }
+  authViews.forEach((view) => {
+    view.hidden = view.dataset.authView !== resolvedMode;
+  });
+  authScreen.hidden = false;
+  setAuthStatus('');
+  setRoutePath(`/${resolvedMode}`);
+
+  const firstInput = authScreen.querySelector(`[data-auth-view="${resolvedMode}"] input`);
+  firstInput?.focus();
+}
+
+function closeAuthScreen({ restoreRoute = true } = {}) {
+  authScreen.hidden = true;
+  setAuthStatus('');
+  if (restoreRoute && isAuthPath(window.location.pathname)) {
+    navigateTo(authReturnPath).catch(showError);
+  }
+}
+
+function setAuthStatus(message) {
+  authScreenStatusEl.textContent = message;
+}
+
+function showAuthError(error) {
+  setAuthStatus(error.message);
+  setStatus(error.message);
+}
+
 function showError(error) {
   setStatus(error.message);
+}
+
+async function navigateTo(path) {
+  const normalizedPath = normalizePath(path);
+  setRoutePath(normalizedPath);
+  await applyRoute();
+}
+
+async function applyRoute() {
+  const normalizedPath = normalizePath();
+  if (normalizedPath !== window.location.pathname || window.location.hash) {
+    setRoutePath(normalizedPath, { replace: true });
+  }
+
+  if (normalizedPath === '/home') {
+    closeAuthScreen({ restoreRoute: false });
+    showHomeView();
+    return;
+  }
+
+  if (normalizedPath === '/favorites') {
+    await openFavorites({ updateRoute: false });
+    return;
+  }
+
+  const authMatch = normalizedPath.match(/^\/(login|signup|account)$/);
+  if (authMatch) {
+    openAuthScreen(authMatch[1]);
+    return;
+  }
+
+  const summaryMatch = normalizedPath.match(/^\/summary\/(\d+)$/);
+  if (summaryMatch) {
+    closeAuthScreen({ restoreRoute: false });
+    if (String(selectedStock?.stock_id) === summaryMatch[1] && !summaryPanel.hidden) {
+      return;
+    }
+
+    await loadSummaryFromRoute(summaryMatch[1]);
+    return;
+  }
+
+  setRoutePath('/home', { replace: true });
+  showHomeView();
+}
+
+function showHomeView() {
+  document.body.classList.remove('summary-mode', 'favorites-mode');
+  homeDashboard.hidden = false;
+  favoritesView.hidden = true;
+  summaryPanel.hidden = true;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showFavoritesView() {
+  document.body.classList.remove('summary-mode');
+  document.body.classList.add('favorites-mode');
+  homeDashboard.hidden = true;
+  favoritesView.hidden = false;
+  summaryPanel.hidden = true;
+}
+
+function normalizePath(path = window.location.pathname) {
+  const legacySummary = window.location.hash.match(/^#summary-(\d+)$/);
+  if (legacySummary) {
+    return `/summary/${legacySummary[1]}`;
+  }
+
+  const hashRoute = window.location.hash.match(/^#(\/.+)$/);
+  if (hashRoute) {
+    return hashRoute[1];
+  }
+
+  return path && path !== '/' ? path : '/home';
+}
+
+function isAuthPath(path) {
+  return /^\/(login|signup|account)$/.test(path);
+}
+
+function setRoutePath(path, { replace = false } = {}) {
+  if (window.location.pathname === path && !window.location.hash) {
+    return;
+  }
+
+  window.history[replace ? 'replaceState' : 'pushState'](null, '', path);
 }
 
 function escapeHtml(value) {

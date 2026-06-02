@@ -6,6 +6,7 @@ import { handleAuthRoute } from './routes/auth.js';
 import { handleHealthRoute } from './routes/health.js';
 import { handleMeRoute } from './routes/me.js';
 import { handleStocksRoute } from './routes/stocks.js';
+import { serveFrontendFile } from './utils/staticFiles.js';
 
 loadEnv();
 
@@ -41,7 +42,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (url.pathname === '/') {
+  if (url.pathname === '/api') {
     sendJson(res, {
       service: 'financial-analysis-backend',
       status: 'ok',
@@ -66,6 +67,10 @@ const server = createServer(async (req, res) => {
         '/api/stocks/1/news/refresh'
       ]
     });
+    return;
+  }
+
+  if (serveFrontendFile(req, res, url)) {
     return;
   }
 
