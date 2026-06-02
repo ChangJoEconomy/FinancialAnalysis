@@ -4,6 +4,7 @@ import {
 } from '../repositories/financialStatementRepository.js';
 import { saveFinancialLineItemsFromDart } from './financialLineItemService.js';
 import { saveFinancialStatementSnapshotsFromDart } from './financialSnapshotService.js';
+import { collectKiwoomStockBasicInfo } from './stockPriceService.js';
 
 const REQUIRED_ACCOUNTS = [
   '자산총계',
@@ -35,7 +36,8 @@ export async function calculateAndSaveFinancialMetrics({
 
   const current = mapLineItems(currentItems);
   const previous = mapLineItems(previousItems);
-  const metrics = buildMetrics({ stockId, fiscalYear, current, previous });
+  const valuation = await tryCollectValuationMetrics(stockId);
+  const metrics = buildMetrics({ stockId, fiscalYear, current, previous, valuation });
   const savedMetrics = [];
 
   for (const metric of metrics) {
@@ -52,16 +54,7 @@ export async function calculateAndSaveFinancialMetrics({
     reportType,
     savedCount: savedMetrics.length,
     savedMetrics,
-    skippedMetrics: [
-      {
-        metricCode: 'PER',
-        reason: '주가와 EPS 데이터가 아직 준비되지 않아 계산하지 않음'
-      },
-      {
-        metricCode: 'PBR',
-        reason: '주가와 BPS 데이터가 아직 준비되지 않아 계산하지 않음'
-      }
-    ]
+    skippedMetrics: valuation.skippedMetrics
   };
 }
 
@@ -70,7 +63,7 @@ async function ensureFinancialLineItems({ stockId, fiscalYear, reportType }) {
   await saveFinancialLineItemsFromDart({ stockId, fiscalYear, reportType });
 }
 
-function buildMetrics({ stockId, fiscalYear, current, previous }) {
+function buildMetrics({ stockId, fiscalYear, current, previous, valuation }) {
   const currentDebtRatio = ratio(current['부채총계'], current['자본총계']);
   const previousDebtRatio = ratio(previous['부채총계'], previous['자본총계']);
   const currentOperatingMargin = ratio(current['영업이익'], current['매출액']);
@@ -79,6 +72,20 @@ function buildMetrics({ stockId, fiscalYear, current, previous }) {
   const previousRoe = ratio(previous['당기순이익'], previous['자본총계']);
 
   return [
+    buildMetric({
+      stockId,
+      fiscalYear,
+      metricCode: 'PER',
+      metricValue: valuation.per,
+      unit: '배'
+    }),
+    buildMetric({
+      stockId,
+      fiscalYear,
+      metricCode: 'PBR',
+      metricValue: valuation.pbr,
+      unit: '배'
+    }),
     buildMetric({
       stockId,
       fiscalYear,
@@ -122,7 +129,7 @@ function buildMetrics({ stockId, fiscalYear, current, previous }) {
   ];
 }
 
-function buildMetric({ stockId, fiscalYear, metricCode, metricValue, previousValue, sourceStatementId }) {
+function buildMetric({ stockId, fiscalYear, metricCode, metricValue, previousValue, sourceStatementId, unit = '%' }) {
   return {
     stock_id: stockId,
     metric_code: metricCode,
@@ -130,13 +137,40 @@ function buildMetric({ stockId, fiscalYear, metricCode, metricValue, previousVal
     fiscal_quarter: 0,
     period_type: 'annual',
     metric_value: round(metricValue),
-    unit: '%',
+    unit,
     previous_value: round(previousValue),
     change_rate: metricCode.endsWith('_GROWTH')
       ? round(metricValue)
       : round(growthRate(metricValue, previousValue)),
     source_statement_id: sourceStatementId || null
   };
+}
+
+async function tryCollectValuationMetrics(stockId) {
+  try {
+    const result = await collectKiwoomStockBasicInfo({ stockId });
+    const { per, pbr } = result.data;
+    const skippedMetrics = [];
+
+    if (!isFiniteNumber(per)) {
+      skippedMetrics.push({ metricCode: 'PER', reason: '키움 기본정보 응답에 PER 값이 없어 계산하지 않음' });
+    }
+
+    if (!isFiniteNumber(pbr)) {
+      skippedMetrics.push({ metricCode: 'PBR', reason: '키움 기본정보 응답에 PBR 값이 없어 계산하지 않음' });
+    }
+
+    return { per, pbr, skippedMetrics };
+  } catch (error) {
+    return {
+      per: null,
+      pbr: null,
+      skippedMetrics: [
+        { metricCode: 'PER', reason: `키움 기본정보를 불러오지 못해 계산하지 않음: ${error.message}` },
+        { metricCode: 'PBR', reason: `키움 기본정보를 불러오지 못해 계산하지 않음: ${error.message}` }
+      ]
+    };
+  }
 }
 
 function mapLineItems(items) {

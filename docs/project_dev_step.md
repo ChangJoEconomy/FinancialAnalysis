@@ -1039,7 +1039,7 @@ line_item_id=8 영업활동현금흐름 72,982,621,000,000
 | 6 | PER | 밸류에이션 판단 |
 | 7 | PBR | 밸류에이션 판단 |
 
-초기에는 주가 데이터가 필요한 PER, PBR보다 재무제표만으로 계산 가능한 지표를 먼저 구현한다.
+초기에는 주가 데이터가 필요한 PER, PBR보다 재무제표만으로 계산 가능한 지표를 먼저 구현했다. Phase 16 완료 후 키움 기본정보 API를 연결해 PER, PBR도 추가했다.
 
 ---
 
@@ -1098,15 +1098,13 @@ backend
 - 삼성전자 지표 계산 worker 추가
 
 계산 구현 완료
+- PER (키움 ka10001 최신 밸류에이션 스냅샷)
+- PBR (키움 ka10001 최신 밸류에이션 스냅샷)
 - DEBT_RATIO
 - OPERATING_MARGIN
 - REVENUE_GROWTH
 - OPERATING_PROFIT_GROWTH
 - ROE
-
-보류
-- PER: 주가/EPS 데이터 준비 후 계산
-- PBR: 주가/BPS 데이터 준비 후 계산
 
 docs
 - docs/api/financial-metrics.md 추가
@@ -1122,7 +1120,15 @@ npm run financial:metrics:samsung
 검증 결과:
 
 ```text
-삼성전자 2024 annual 지표 5개 저장 완료
+삼성전자 2024 annual 분석 묶음 지표 7개 저장 완료
+
+metric_value_id=6 PER
+- metric_value: 54.92배
+- source: 키움 ka10001 최신 스냅샷
+
+metric_value_id=7 PBR
+- metric_value: 5.63배
+- source: 키움 ka10001 최신 스냅샷
 
 metric_value_id=1 DEBT_RATIO
 - metric_value: 27.931898%
@@ -1629,9 +1635,10 @@ frontend
 - AI 추가 질문 입력과 답변 표시 연결
 - 데스크톱 / 모바일 반응형 레이아웃 적용
 
-보류
-- 현재가 / 등락률: 키움증권 REST API 수집 단계에서 연결
-- 주가 그래프: Phase 16에서 연결
+Phase 16 후속 완료
+- 현재가 / 등락률: 키움증권 REST API 최근 일봉 데이터 연결
+- 주가 그래프: 최근 30거래일 SVG 그래프 연결
+- PER / PBR: 키움 ka10001 최신 밸류에이션 스냅샷 연결
 ```
 
 검증 결과:
@@ -2030,6 +2037,18 @@ docs
 - worker 재실행 시 metadata_cache 재사용 확인
 ```
 
+Phase 16 후속 완료:
+
+```text
+2026-06-02 키움 주식기본정보요청(ka10001) 연결
+- data-cache/prices/005930/basic-info.json 생성
+- 현재가 360,500원, PER 54.92배, EPS 6,564원, PBR 5.63배, BPS 63,976원 확인
+- financial_metric_values에 PER, PBR 저장
+- 신호등 분석 지표를 5개에서 7개로 확장
+- Gemini 설명 재생성 완료
+- 업종 평균이 없는 MVP 단계에서는 PER 15/30배, PBR 1.5/3배를 참고 기준으로 사용
+```
+
 ---
 
 # Phase 17. 뉴스 분석 기능 구현
@@ -2215,7 +2234,7 @@ AI가 매수/매도를 대신하지 않는다.
 - [x] DART 원본 캐시 저장 (삼성전자 2023/2024 annual 기준)
 - [x] financial_statement_snapshots 저장 (삼성전자 2024 annual 기준)
 - [x] financial_line_items 저장 (삼성전자 2023/2024 annual 기준)
-- [x] financial_metric_values 계산 및 저장 (삼성전자 2024 annual 기준, PER/PBR 제외)
+- [x] financial_metric_values 계산 및 저장 (삼성전자 2024 annual 분석 묶음 7개, PER/PBR 최신 스냅샷 포함)
 - [x] ai_analysis_runs 저장 (규칙 기반 + LLM 설명 삼성전자 2024 annual 기준)
 - [x] ai_metric_analysis_items 저장 (규칙 기반 + LLM 설명 삼성전자 2024 annual 기준)
 - [x] ai_analysis_evidences 저장 (규칙 기반 + LLM 설명 삼성전자 2024 annual 기준)
@@ -2272,19 +2291,19 @@ AI가 매수/매도를 대신하지 않는다.
 
 # 바로 다음 작업
 
-현재 상태에서 가장 먼저 해야 할 일은 **Phase 16. 주가 그래프 기능 구현**이다.
+현재 상태에서 가장 먼저 해야 할 일은 **Phase 17. 뉴스 분석 기능 구현**이다.
 
 바로 다음 순서:
 
 ```text
-1. 키움증권 REST API 인증 토큰 발급 확인
-2. 삼성전자 일별 주가 수집 서비스 구현
-3. 최근 30일 또는 90일 주가 DB 저장
-4. 장기 주가 로컬 캐시 파일 저장
-5. 요약분석 화면 주가 그래프 연결
+1. 뉴스 API 공급원 결정
+2. 삼성전자 최근 뉴스 수집 서비스 구현
+3. 뉴스 메타데이터 DB 저장과 원본 로컬 캐시 연결
+4. 호재 / 악재 / 중립 AI 분석 구현
+5. 뉴스 분석 화면 연결
 ```
 
-이 단계가 끝나면 다음으로 뉴스 수집과 뉴스 분석을 구현한다.
+주가 데이터가 필요한 기존 보류 항목인 현재가, 등락률, 그래프, PER, PBR은 완료했다.
 
 ---
 

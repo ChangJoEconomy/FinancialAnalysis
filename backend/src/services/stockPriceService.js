@@ -20,6 +20,8 @@ import {
 
 const KIWOOM_DAILY_CHART_API_ID = 'ka10081';
 const KIWOOM_DAILY_CHART_ENDPOINT = '/api/dostk/chart';
+const KIWOOM_STOCK_BASIC_INFO_API_ID = 'ka10001';
+const KIWOOM_STOCK_INFO_ENDPOINT = '/api/dostk/stkinfo';
 const DEFAULT_RECENT_DAYS = 90;
 const DEFAULT_HISTORY_DAYS = 370;
 const DEFAULT_CHART_DAYS = 30;
@@ -126,6 +128,65 @@ export async function collectKiwoomDailyPrices({
   });
 }
 
+export async function collectKiwoomStockBasicInfo({ stockId, forceRefresh = false }) {
+  const stock = await requireStock(stockId);
+  const logicalKey = buildKiwoomStockBasicInfoLogicalKey(stock.stock_code);
+  const cachePathSegments = ['prices', stock.stock_code, 'basic-info.json'];
+  const absoluteCachePath = resolveCachePath(...cachePathSegments);
+
+  if (!forceRefresh) {
+    const cached = await tryReadFreshCache({ logicalKey, absoluteCachePath });
+    if (cached) {
+      return {
+        cacheHit: true,
+        source: cached.source,
+        stock,
+        logicalKey,
+        cacheMetadata: cached.cacheMetadata,
+        data: normalizeKiwoomStockBasicInfo(cached.data)
+      };
+    }
+  }
+
+  const rawData = await fetchKiwoomStockBasicInfoRaw(stock.stock_code);
+  const data = normalizeKiwoomStockBasicInfo(rawData);
+  let cacheMetadata = null;
+  let metadataWarning = null;
+
+  try {
+    cacheMetadata = await saveJsonCacheWithMetadata({
+      provider: 'KIWOOM',
+      cacheType: 'stock_basic_info',
+      targetType: 'stock',
+      targetId: stock.stock_code,
+      stockId: stock.stock_id,
+      logicalKey,
+      cachePathSegments,
+      data: rawData,
+      periodStart: data.tradeDate,
+      periodEnd: data.tradeDate,
+      expiresAt: buildDefaultExpiresAt(),
+      metadata: {
+        stock_code: stock.stock_code,
+        api_id: KIWOOM_STOCK_BASIC_INFO_API_ID
+      }
+    });
+  } catch (error) {
+    metadataWarning = error.message;
+    writeJsonCacheFile(absoluteCachePath, rawData);
+  }
+
+  return {
+    cacheHit: false,
+    source: 'kiwoom_api',
+    stock,
+    logicalKey,
+    cacheMetadata,
+    metadataWarning,
+    data
+  };
+}
+
 export async function fetchKiwoomAccessToken({ forceRefresh = false } = {}) {
   if (!forceRefresh && tokenCache && tokenCache.expiresAt.getTime() - Date.now() > 60_000) {
     return tokenCache.token;
@@ -157,6 +218,29 @@ export async function fetchKiwoomAccessToken({ forceRefresh = false } = {}) {
   };
 
   return tokenCache.token;
+}
+
+export async function fetchKiwoomStockBasicInfoRaw(stockCode) {
+  const token = await fetchKiwoomAccessToken();
+  const response = await fetch(`${getKiwoomApiBaseUrl()}${KIWOOM_STOCK_INFO_ENDPOINT}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json;charset=UTF-8',
+      authorization: `Bearer ${token}`,
+      'api-id': KIWOOM_STOCK_BASIC_INFO_API_ID
+    },
+    body: JSON.stringify({
+      stk_cd: stockCode
+    })
+  });
+  const data = await readJson(response);
+
+  if (!response.ok || !isKiwoomSuccess(data)) {
+    throw badGateway(`Kiwoom stock basic info request failed: ${response.status}`, data);
+  }
+
+  return data;
 }
 
 export async function fetchKiwoomDailyChartRaw({
@@ -255,6 +339,26 @@ export function buildKiwoomDailyPriceLogicalKey(stockCode) {
   return `KIWOOM:price_daily:${stockCode}`;
 }
 
+export function normalizeKiwoomStockBasicInfo(rawData) {
+  return {
+    stockCode: rawData.stk_cd || null,
+    stockName: rawData.stk_nm || null,
+    tradeDate: formatDateInSeoul(new Date()),
+    currentPrice: parseNumeric(rawData.cur_prc, { absolute: true }),
+    changeAmount: parseNumeric(rawData.pred_pre),
+    changeRate: parseNumeric(rawData.flu_rt),
+    volume: parseNumeric(rawData.trde_qty, { absolute: true }),
+    per: parseNumeric(rawData.per),
+    eps: parseNumeric(rawData.eps),
+    pbr: parseNumeric(rawData.pbr),
+    bps: parseNumeric(rawData.bps)
+  };
+}
+
+export function buildKiwoomStockBasicInfoLogicalKey(stockCode) {
+  return `KIWOOM:stock_basic_info:${stockCode}`;
+}
+
 async function persistCollectedPrices({
   stock,
   logicalKey,
@@ -316,6 +420,12 @@ async function persistCollectedPrices({
 }
 
 async function tryReadFreshPriceCache({ logicalKey, absoluteCachePath }) {
+  return tryReadFreshCache({ logicalKey, absoluteCachePath });
+}
+
+async function tryReadFreshCache({ logicalKey, absoluteCachePath }) {
+  let metadataLookupFailed = false;
+
   try {
     const metadata = await getFreshCacheByLogicalKey(logicalKey);
     if (metadata && cacheFileExists(absoluteCachePath)) {
@@ -326,10 +436,10 @@ async function tryReadFreshPriceCache({ logicalKey, absoluteCachePath }) {
       };
     }
   } catch {
-    // Local cache remains usable when Supabase metadata is temporarily unavailable.
+    metadataLookupFailed = true;
   }
 
-  if (cacheFileExists(absoluteCachePath)) {
+  if (metadataLookupFailed && cacheFileExists(absoluteCachePath)) {
     return {
       source: 'file_cache',
       cacheMetadata: null,

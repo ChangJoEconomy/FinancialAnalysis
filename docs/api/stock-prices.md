@@ -29,6 +29,9 @@ POST /oauth2/token
 → POST /api/dostk/chart
 → api-id: ka10081
 → 삼성전자 일봉 데이터 조회
+→ POST /api/dostk/stkinfo
+→ api-id: ka10001
+→ 현재가, PER, EPS, PBR, BPS 기본정보 조회
 ```
 
 삼성전자 수집 명령:
@@ -48,12 +51,14 @@ npm run prices:collect:samsung -- --force
 
 ```text
 data-cache/prices/005930/daily.json
+data-cache/prices/005930/basic-info.json
 ```
 
 저장 정책:
 
 ```text
 키움 원본 일봉 응답: 로컬 JSON 파일
+키움 기본정보 응답: 로컬 JSON 파일
 장기 파일 메타데이터: external_data_cache_files
 장기 파일 범위: stock_price_cache_ranges
 최근 90거래일 화면용 데이터: stock_prices_daily

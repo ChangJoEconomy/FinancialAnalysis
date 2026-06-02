@@ -17,6 +17,30 @@ const MODEL_NAME = 'rules-v1';
 const ANALYSIS_TYPE = 'financial';
 
 const METRIC_RULES = {
+  PER: {
+    label: 'PER',
+    category: 'valuation',
+    unit: '배',
+    evaluate: evaluateValuationMetric({
+      label: 'PER',
+      greenMax: 15,
+      orangeMax: 30,
+      explanation: '현재 주가가 이익의 몇 배 수준인지 보여줍니다.',
+      checkPoint: '업종 평균, 이익의 지속 가능성, 예상 실적을 함께 비교하세요.'
+    })
+  },
+  PBR: {
+    label: 'PBR',
+    category: 'valuation',
+    unit: '배',
+    evaluate: evaluateValuationMetric({
+      label: 'PBR',
+      greenMax: 1.5,
+      orangeMax: 3,
+      explanation: '현재 주가가 순자산의 몇 배 수준인지 보여줍니다.',
+      checkPoint: '업종 특성, ROE, 보유 자산의 질을 함께 비교하세요.'
+    })
+  },
   DEBT_RATIO: {
     label: '부채비율',
     category: 'stability',
@@ -209,7 +233,7 @@ export async function runFinancialTrafficLightAnalysis({
       evidence_type: 'financial_metric',
       reference_table: 'financial_metric_values',
       reference_id: String(item.metricValueId),
-      evidence_text: `${item.label}: ${formatPercent(item.metricValue)} -> ${item.signal}`,
+      evidence_text: `${item.label}: ${formatMetricValue(item.metricValue, item.unit)} -> ${item.signal}`,
       importance_score: item.score
     }));
   }
@@ -233,6 +257,7 @@ function analyzeMetric(metric) {
     metricCode: metric.metric_code,
     label: rule.label,
     category: rule.category,
+    unit: rule.unit,
     metricValue: round(metricValue),
     industryAvgValue: nullableNumber(metric.industry_avg_value),
     previousValue: nullableNumber(metric.previous_value),
@@ -272,6 +297,48 @@ function evaluateGrowthMetric(metricName, greenExplanation, orangeExplanation, r
       reason: `${metricName}이 ${formatPercent(value)}로 0% 미만입니다.`,
       explanation: redExplanation,
       checkPoint: '감소 원인이 업황 부진인지 회사 경쟁력 약화인지 구분해야 합니다.'
+    };
+  };
+}
+
+function evaluateValuationMetric({ label, greenMax, orangeMax, explanation, checkPoint }) {
+  return (value) => {
+    if (value <= 0) {
+      return {
+        signal: 'red',
+        score: 30,
+        reason: `${label}이 ${formatMultiple(value)}입니다. 이익 또는 순자산 값을 추가로 확인해야 합니다.`,
+        explanation,
+        checkPoint
+      };
+    }
+
+    if (value <= greenMax) {
+      return {
+        signal: 'green',
+        score: 80,
+        reason: `${label}이 ${formatMultiple(value)}로 참고 기준 ${greenMax}배 이하입니다.`,
+        explanation,
+        checkPoint
+      };
+    }
+
+    if (value <= orangeMax) {
+      return {
+        signal: 'orange',
+        score: 60,
+        reason: `${label}이 ${formatMultiple(value)}로 참고 기준 ${greenMax}배 초과 ${orangeMax}배 이하입니다.`,
+        explanation,
+        checkPoint
+      };
+    }
+
+    return {
+      signal: 'red',
+      score: 35,
+      reason: `${label}이 ${formatMultiple(value)}로 참고 기준 ${orangeMax}배를 초과합니다.`,
+      explanation,
+      checkPoint
     };
   };
 }
@@ -421,4 +488,12 @@ function round(value) {
 
 function formatPercent(value) {
   return `${round(value)}%`;
+}
+
+function formatMultiple(value) {
+  return `${round(value)}배`;
+}
+
+function formatMetricValue(value, unit) {
+  return unit === '배' ? formatMultiple(value) : formatPercent(value);
 }
