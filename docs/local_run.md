@@ -17,12 +17,14 @@ http://127.0.0.1:4000
 화면 경로:
 
 ```text
+/
 /home
+/search
 /favorites
 /login
 /signup
 /account
-/summary/:stockId
+/summary/1
 ```
 
 주요 확인 주소:

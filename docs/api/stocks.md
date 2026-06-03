@@ -4,6 +4,8 @@
 
 종목명, 영문명, 종목코드, 티커, 별칭으로 종목을 검색한다.
 
+현재 기본 종목 마스터는 `npm --prefix backend run seed:stocks:krx -- --apply`로 입력한 KOSPI/KOSDAQ 전체 종목이다. 삼성전자는 API 예시와 분석 데모 기준 종목으로 사용한다.
+
 문서 예시 호환을 위해 `/stocks/search`도 같은 응답을 반환한다.
 
 요청:

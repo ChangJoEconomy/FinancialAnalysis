@@ -8,7 +8,7 @@ Phase 8은 `financial_metric_values`에 저장된 재무 지표를 기준으로 
 financial_metric_values
 ```
 
-현재 삼성전자 MVP에서 사용하는 지표:
+현재 삼성전자 분석 데모에서 사용하는 지표:
 
 ```text
 PER
@@ -65,4 +65,4 @@ backend/src/workers/analyzeSamsungTrafficLight.js
 
 이 단계는 LLM을 호출하지 않는다. 판단은 재현 가능한 규칙으로 수행하고, LLM 기반 자연어 설명은 Phase 9에서 붙인다.
 
-`PER`, `PBR` 기준은 업종 평균 데이터가 아직 없는 MVP 참고 기준이다. 실제 해석에서는 업종 평균, 성장 전망, ROE를 함께 확인해야 한다.
+`PER`, `PBR` 기준은 업종 평균 데이터가 아직 없는 현재 구현의 참고 기준이다. 실제 해석에서는 업종 평균, 성장 전망, ROE를 함께 확인해야 한다.

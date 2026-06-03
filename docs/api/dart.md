@@ -9,10 +9,9 @@ backend/src/services/dartFinancialService.js
 backend/src/workers/collectSamsungDartFinancials.js
 ```
 
-재사용한 기존 로직:
+현재 구현에 반영된 DART 호출 조건:
 
 ```text
-stock-details.js에서 사용하던 DART API 엔드포인트
 fnlttSinglAcntAll.json
 reprt_code=11011
 fs_div=CFS
