@@ -78,6 +78,16 @@ const server = createServer(async (req, res) => {
   sendNotFound(res);
 });
 
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${host}:${port} is already in use.`);
+    console.error('Stop the existing server or run with a different PORT/BACKEND_PORT.');
+    process.exit(1);
+  }
+
+  throw error;
+});
+
 server.listen(port, host, () => {
   console.log(`Backend server listening on http://${host}:${port}`);
 });
