@@ -87,6 +87,7 @@ GET /api/stocks/1/prices?days=30
       "company_name_ko": "삼성전자"
     },
     "days": 30,
+    "source": "database",
     "prices": [
       {
         "trade_date": "2026-05-18",
@@ -104,3 +105,21 @@ GET /api/stocks/1/prices?days=30
   }
 }
 ```
+
+`source`는 최근 주가 그래프 데이터 출처이다. DB의 `stock_prices_daily`에 최근 데이터가 있으면 `database`, DB가 비어 있고 로컬 일봉 캐시 파일을 사용하면 `cache_file`이다.
+
+## POST /api/stocks/:stockId/prices/collect
+
+요약분석 화면에서 최근 주가가 없을 때 자동으로 호출한다. 키움 일봉 데이터를 수집해 캐시에 저장하고, 최근 그래프에 필요한 가격 데이터를 함께 반환한다.
+
+요청:
+
+```json
+{
+  "days": 30,
+  "recentDays": 90,
+  "forceRefresh": false
+}
+```
+
+응답의 `data.prices`와 `data.latest` 형식은 `GET /api/stocks/:stockId/prices`와 같다.

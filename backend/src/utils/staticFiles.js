@@ -39,7 +39,8 @@ export function serveFrontendFile(req, res, url) {
   }
 
   res.writeHead(200, {
-    'Content-Type': contentTypes[extname(filePath).toLowerCase()] || 'application/octet-stream'
+    'Content-Type': contentTypes[extname(filePath).toLowerCase()] || 'application/octet-stream',
+    'Cache-Control': 'no-store'
   });
 
   if (req.method === 'HEAD') {
@@ -54,6 +55,7 @@ export function serveFrontendFile(req, res, url) {
 function isFrontendRoute(pathname) {
   return pathname === '/'
     || /^\/(?:home|favorites|login|signup|account)$/.test(pathname)
+    || pathname === '/search'
     || /^\/summary\/\d+$/.test(pathname);
 }
 

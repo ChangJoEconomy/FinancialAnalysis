@@ -36,7 +36,9 @@ export async function patchFavoriteStock(authContext, favoriteId, payload) {
 }
 
 export async function getSearchHistories(authContext, limit) {
-  return listSearchHistories(authContext.userId, limit);
+  const normalizedLimit = normalizeHistoryLimit(limit);
+  const histories = await listSearchHistories(authContext.userId, Math.max(normalizedLimit * 5, 50));
+  return dedupeSearchHistories(histories).slice(0, normalizedLimit);
 }
 
 export async function createSearchHistory(authContext, payload) {
@@ -129,6 +131,35 @@ function validateRiskType(riskType) {
   if (!ANALYSIS_PRESETS[riskType]) {
     throw Object.assign(new Error('riskType must be conservative, balanced, or growth.'), { statusCode: 400 });
   }
+}
+
+function dedupeSearchHistories(histories) {
+  const seenKeys = new Set();
+  const uniqueHistories = [];
+
+  for (const history of histories) {
+    const key = history.stock_id
+      ? `stock:${history.stock_id}`
+      : `query:${String(history.query_text || '').trim().toLowerCase()}`;
+
+    if (seenKeys.has(key)) {
+      continue;
+    }
+
+    seenKeys.add(key);
+    uniqueHistories.push(history);
+  }
+
+  return uniqueHistories;
+}
+
+function normalizeHistoryLimit(limit) {
+  const normalizedLimit = Number(limit);
+  if (!Number.isInteger(normalizedLimit) || normalizedLimit <= 0) {
+    return 10;
+  }
+
+  return Math.min(normalizedLimit, 100);
 }
 
 function validateWeights(weights) {

@@ -6,7 +6,7 @@ import {
   getStockSummary
 } from '../services/stockAnalysisService.js';
 import { createSearchHistory } from '../services/userDataService.js';
-import { getRecentStockPrices } from '../services/stockPriceService.js';
+import { collectKiwoomDailyPrices, getRecentStockPrices } from '../services/stockPriceService.js';
 import { collectAndAnalyzeStockNews, getStockNews } from '../services/newsAnalysisService.js';
 import { getOptionalAuthContext, requireAuthContext } from '../utils/authContext.js';
 import { readJsonBody, sendError, sendJson } from '../utils/http.js';
@@ -75,6 +75,25 @@ export async function handleStocksRoute(req, res, url) {
         return;
       }
 
+      if (req.method === 'POST' && resource === 'prices/collect') {
+        const body = await readJsonBody(req);
+        const collection = await collectKiwoomDailyPrices({
+          stockId,
+          recentDays: body.recentDays || 90,
+          forceRefresh: Boolean(body.forceRefresh)
+        });
+        sendJson(res, {
+          data: {
+            collection,
+            ...(await getRecentStockPrices({
+              stockId,
+              days: body.days || 30
+            }))
+          }
+        });
+        return;
+      }
+
       if (req.method === 'GET' && resource === 'news') {
         sendJson(res, {
           data: await getStockNews({
@@ -110,7 +129,7 @@ export async function handleStocksRoute(req, res, url) {
 }
 
 function matchStockPath(pathname) {
-  const match = pathname.match(/^\/(?:api\/)?stocks\/(\d+)(?:\/(summary|analyze|financials|prices|news|news\/refresh))?$/);
+  const match = pathname.match(/^\/(?:api\/)?stocks\/(\d+)(?:\/(summary|analyze|financials|prices|prices\/collect|news|news\/refresh))?$/);
   if (!match) {
     return null;
   }

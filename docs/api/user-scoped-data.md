@@ -46,6 +46,7 @@ Authorization: Bearer <accessToken>
 ## GET /api/me/search-histories
 
 현재 로그인 사용자의 검색 기록만 조회한다.
+같은 `stockId`를 여러 번 조회한 경우 최근 기록 1개만 반환한다.
 
 ## POST /api/me/search-histories
 

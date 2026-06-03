@@ -63,6 +63,7 @@ const server = createServer(async (req, res) => {
         '/api/stocks/1/analyze',
         '/api/stocks/1/financials?fiscalYear=2024',
         '/api/stocks/1/prices?days=30',
+        '/api/stocks/1/prices/collect',
         '/api/stocks/1/news?limit=5',
         '/api/stocks/1/news/refresh'
       ]

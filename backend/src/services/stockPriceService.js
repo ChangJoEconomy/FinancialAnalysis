@@ -6,7 +6,9 @@ import {
   upsertStockPricesDaily
 } from '../repositories/stockPriceRepository.js';
 import {
+  cacheFileExists,
   getCacheFileInfo,
+  readJsonCacheFile,
   resolveCachePath,
   toProjectRelativePath,
   writeJsonCacheFile
@@ -31,11 +33,13 @@ let tokenCache = null;
 export async function getRecentStockPrices({ stockId, days = DEFAULT_CHART_DAYS }) {
   const stock = await requireStock(stockId);
   const normalizedDays = parsePositiveInteger(days, 'days', { defaultValue: DEFAULT_CHART_DAYS, max: 90 });
-  const prices = (await listRecentStockPrices(stock.stock_id, normalizedDays)).reverse();
+  const dbPrices = (await listRecentStockPrices(stock.stock_id, normalizedDays)).reverse();
+  const prices = dbPrices.length ? dbPrices : readRecentPricesFromCacheFile(stock, normalizedDays);
 
   return {
     stock,
     days: normalizedDays,
+    source: dbPrices.length ? 'database' : prices.length ? 'cache_file' : null,
     prices,
     latest: prices.at(-1) || null
   };
@@ -356,6 +360,32 @@ export function normalizeKiwoomStockBasicInfo(rawData) {
 
 export function buildKiwoomStockBasicInfoLogicalKey(stockCode) {
   return `KIWOOM:stock_basic_info:${stockCode}`;
+}
+
+function readRecentPricesFromCacheFile(stock, days) {
+  const cachePath = resolveCachePath('prices', stock.stock_code, 'daily.json');
+  if (!cacheFileExists(cachePath)) {
+    return [];
+  }
+
+  try {
+    return normalizeKiwoomDailyPrices(readJsonCacheFile(cachePath))
+      .slice(-days)
+      .map((price) => ({
+        price_id: null,
+        stock_id: stock.stock_id,
+        open_price: null,
+        high_price: null,
+        low_price: null,
+        adjusted_close: price.close_price,
+        change_amount: null,
+        source_provider: 'KIWOOM_CACHE',
+        fetched_at: null,
+        ...price
+      }));
+  } catch {
+    return [];
+  }
 }
 
 async function persistCollectedPrices({

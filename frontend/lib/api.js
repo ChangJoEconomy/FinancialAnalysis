@@ -97,6 +97,13 @@ export async function getStockPrices(stockId, days = 30) {
   });
 }
 
+export async function collectStockPrices(stockId, payload = {}) {
+  return request(`/api/stocks/${stockId}/prices/collect`, {
+    method: 'POST',
+    body: payload
+  });
+}
+
 export async function getStockNews(stockId, limit = 5) {
   const params = new URLSearchParams({ limit: String(limit) });
   return request(`/api/stocks/${stockId}/news?${params.toString()}`, {
