@@ -944,6 +944,10 @@
         line-height: 1.6;
       }
 
+      .benchmark-note[hidden] {
+        display: none;
+      }
+
       .signal-chip {
         display: inline-flex;
         align-items: center;
@@ -2233,6 +2237,48 @@
               <span data-analysis-period></span>
             </div>
             <div class="metric-grid" data-metric-grid></div>
+            <section class="detail-panel" data-metric-detail hidden aria-label="재무 지표 상세">
+              <div class="detail-header">
+                <div>
+                  <h3 data-detail-title>재무 지표 상세</h3>
+                  <div class="detail-meta" data-detail-meta></div>
+                </div>
+                <button class="text-button" type="button" data-detail-close>닫기</button>
+              </div>
+              <div class="detail-grid">
+                <div class="detail-stat">
+                  <span>현재 값</span>
+                  <strong data-detail-current-value>-</strong>
+                </div>
+                <div class="detail-stat">
+                  <span>이전 기간 값</span>
+                  <strong data-detail-previous-value>-</strong>
+                </div>
+                <div class="detail-stat">
+                  <span>업종 평균</span>
+                  <strong data-detail-industry-average>-</strong>
+                </div>
+              </div>
+              <div class="detail-explanations">
+                <div class="detail-copy">
+                  <h4>쉬운 설명</h4>
+                  <p data-detail-beginner-explanation></p>
+                </div>
+                <div class="detail-copy">
+                  <h4>판단 이유</h4>
+                  <p data-detail-reason></p>
+                </div>
+                <div class="detail-copy">
+                  <h4>전년 대비 변화</h4>
+                  <p data-detail-comparison></p>
+                </div>
+                <div class="detail-copy">
+                  <h4>추가 확인 포인트</h4>
+                  <p data-detail-check-point></p>
+                </div>
+              </div>
+              <div class="benchmark-note" data-detail-benchmark-note></div>
+            </section>
           </section>
 
           <section class="analysis-section" aria-label="최근 주가">
@@ -2258,49 +2304,6 @@
             </div>
             <p class="news-empty" data-news-empty>최근 뉴스를 불러오는 중입니다.</p>
             <div class="news-grid" data-news-list hidden></div>
-          </section>
-
-          <section class="detail-panel" data-metric-detail hidden aria-label="재무 지표 상세">
-            <div class="detail-header">
-              <div>
-                <h3 data-detail-title>재무 지표 상세</h3>
-                <div class="detail-meta" data-detail-meta></div>
-              </div>
-              <button class="text-button" type="button" data-detail-close>닫기</button>
-            </div>
-            <div class="detail-grid">
-              <div class="detail-stat">
-                <span>현재 값</span>
-                <strong data-detail-current-value>-</strong>
-              </div>
-              <div class="detail-stat">
-                <span>이전 기간 값</span>
-                <strong data-detail-previous-value>-</strong>
-              </div>
-              <div class="detail-stat">
-                <span>업종 평균</span>
-                <strong data-detail-industry-average>-</strong>
-              </div>
-            </div>
-            <div class="detail-explanations">
-              <div class="detail-copy">
-                <h4>쉬운 설명</h4>
-                <p data-detail-beginner-explanation></p>
-              </div>
-              <div class="detail-copy">
-                <h4>판단 이유</h4>
-                <p data-detail-reason></p>
-              </div>
-              <div class="detail-copy">
-                <h4>전년 대비 변화</h4>
-                <p data-detail-comparison></p>
-              </div>
-              <div class="detail-copy">
-                <h4>추가 확인 포인트</h4>
-                <p data-detail-check-point></p>
-              </div>
-            </div>
-            <div class="benchmark-note" data-detail-benchmark-note></div>
           </section>
 
           <section class="analysis-section" aria-label="AI 질문">
@@ -2338,6 +2341,6 @@
       </section>
     </main>
 
-    <script type="module" src="./pages/auth.js?v=20260603-ui-polish"></script>
+    <script type="module" src="./pages/auth.js?v=20260603-metric-detail"></script>
   </body>
 </html>

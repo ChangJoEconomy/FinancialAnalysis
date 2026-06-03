@@ -1262,9 +1262,10 @@ function showMetricDetail(metric, { scroll = true } = {}) {
   detailReasonEl.textContent = metric.reason_text || '판단 이유가 준비되지 않았습니다.';
   detailComparisonEl.textContent = buildComparisonText(metric);
   detailCheckPointEl.textContent = metric.check_point_text || '추가 확인 포인트가 준비되지 않았습니다.';
+  detailBenchmarkNoteEl.hidden = !hasIndustryAverage;
   detailBenchmarkNoteEl.textContent = hasIndustryAverage
     ? `업종 평균은 ${formatMetricValue(industryAverage, unit)}입니다. 현재 값과 업종 평균을 함께 비교해 보세요.`
-    : '업종 평균 데이터는 아직 준비되지 않았습니다. 현재 분석은 전년 대비 변화와 현재 재무 상태를 기준으로 판단했습니다.';
+    : '';
   metricDetailEl.hidden = false;
   rerenderMetricCards();
 
