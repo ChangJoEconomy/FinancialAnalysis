@@ -1600,7 +1600,8 @@
         margin-bottom: 22px;
         color: var(--text);
         font-size: 46px;
-        line-height: 1.06;
+        line-height: 1.18;
+        padding-bottom: 0.06em;
       }
 
       .search-mode h1,
@@ -2423,13 +2424,15 @@ input:focus {
 /* Typography Enhancements */
 h1, h2, h3, .brand {
   font-weight: 800 !important;
-  letter-spacing: -0.02em !important;
+  letter-spacing: 0 !important;
 }
 
 h1 {
   background: linear-gradient(135deg, #0f172a, var(--brand-dark));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  line-height: 1.18;
+  padding-bottom: 0.06em;
 }
 
 /* Chat Input Enhancement */
