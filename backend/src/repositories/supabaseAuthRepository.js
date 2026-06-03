@@ -32,6 +32,14 @@ export async function getAuthUser(accessToken) {
   });
 }
 
+export async function updateAuthUser(accessToken, attributes) {
+  return requestSupabaseAuth('user', {
+    method: 'PUT',
+    accessToken,
+    body: attributes
+  });
+}
+
 export async function signOut(accessToken) {
   await requestSupabaseAuth('logout', {
     method: 'POST',

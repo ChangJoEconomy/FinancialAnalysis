@@ -36,6 +36,14 @@ export async function getMe() {
   });
 }
 
+export async function updateAccount(payload) {
+  return request('/api/auth/account', {
+    method: 'PATCH',
+    body: payload,
+    accessToken: getStoredAccessToken()
+  });
+}
+
 export async function logout() {
   const token = getStoredAccessToken();
   if (!token) {

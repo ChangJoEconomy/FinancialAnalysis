@@ -2,7 +2,8 @@ import {
   getAuthUser,
   signInWithPassword,
   signOut,
-  signUpWithPassword
+  signUpWithPassword,
+  updateAuthUser
 } from '../repositories/supabaseAuthRepository.js';
 import { ensureUserProfileForAuthUser } from '../repositories/userRepository.js';
 
@@ -53,6 +54,27 @@ export async function logout(accessToken) {
   return { status: 'ok' };
 }
 
+export async function updateAccount(accessToken, { email, password } = {}) {
+  if (!accessToken) {
+    throw unauthorized('Missing bearer token.');
+  }
+
+  const attributes = validateAccountUpdateInput({ email, password });
+  const authResult = await updateAuthUser(accessToken, attributes);
+  const authUser = normalizeAuthUser(authResult);
+
+  if (!authUser?.id) {
+    throw badRequest('Supabase Auth did not return an updated user.');
+  }
+
+  const profile = await ensureUserProfileForAuthUser(authUser);
+
+  return {
+    user: profile,
+    authUser: sanitizeAuthUser(authUser)
+  };
+}
+
 function buildAuthResponse(authResult, profile) {
   return {
     accessToken: authResult.access_token || null,
@@ -77,6 +99,10 @@ function sanitizeAuthUser(authUser) {
   };
 }
 
+function normalizeAuthUser(authResult) {
+  return authResult?.user || authResult;
+}
+
 function validateAuthInput({ email, password, nickname }, { requireNickname = false } = {}) {
   if (!email || !email.includes('@')) {
     throw badRequest('Valid email is required.');
@@ -89,6 +115,31 @@ function validateAuthInput({ email, password, nickname }, { requireNickname = fa
   if (requireNickname && !nickname?.trim()) {
     throw badRequest('Nickname is required.');
   }
+}
+
+function validateAccountUpdateInput({ email, password }) {
+  const attributes = {};
+  const normalizedEmail = email?.trim();
+
+  if (normalizedEmail) {
+    if (!normalizedEmail.includes('@')) {
+      throw badRequest('Valid email is required.');
+    }
+    attributes.email = normalizedEmail;
+  }
+
+  if (password) {
+    if (password.length < 6) {
+      throw badRequest('Password must be at least 6 characters.');
+    }
+    attributes.password = password;
+  }
+
+  if (!Object.keys(attributes).length) {
+    throw badRequest('Email or password is required.');
+  }
+
+  return attributes;
 }
 
 function badRequest(message) {

@@ -24,6 +24,7 @@ import {
   sendChatMessage,
   signup,
   storeAccessToken,
+  updateAccount,
   updateFavoriteStock
 } from '../lib/api.js';
 
@@ -31,6 +32,8 @@ const statusEl = document.querySelector('[data-auth-status]');
 const userEl = document.querySelector('[data-auth-user]');
 const signupForm = document.querySelector('[data-signup-form]');
 const loginForm = document.querySelector('[data-login-form]');
+const accountEmailForm = document.querySelector('[data-account-email-form]');
+const accountPasswordForm = document.querySelector('[data-account-password-form]');
 const meButton = document.querySelector('[data-me-button]');
 const logoutButton = document.querySelector('[data-logout-button]');
 const topLoginButton = document.querySelector('.top-login-button');
@@ -60,6 +63,18 @@ const summaryEmptyMessageEl = summaryPanel.querySelector('[data-summary-empty] p
 const summaryNameEl = document.querySelector('[data-summary-name]');
 const summaryMetaEl = document.querySelector('[data-summary-meta]');
 const summaryCloseButton = document.querySelector('[data-summary-close]');
+const autoCollectPanelEl = document.querySelector('[data-auto-collect-panel]');
+const autoCollectTitleEl = document.querySelector('[data-auto-collect-title]');
+const autoCollectStepEls = {
+  summary: document.querySelector('[data-auto-collect-step="summary"]'),
+  prices: document.querySelector('[data-auto-collect-step="prices"]'),
+  news: document.querySelector('[data-auto-collect-step="news"]')
+};
+const autoCollectStatusEls = {
+  summary: document.querySelector('[data-auto-collect-status="summary"]'),
+  prices: document.querySelector('[data-auto-collect-status="prices"]'),
+  news: document.querySelector('[data-auto-collect-status="news"]')
+};
 const summaryEmptyEl = document.querySelector('[data-summary-empty]');
 const summaryContentEl = document.querySelector('[data-summary-content]');
 const overallSignalDotEl = document.querySelector('[data-overall-signal-dot]');
@@ -113,6 +128,7 @@ let chatSessions = [];
 let selectedMetricCode = null;
 let favoriteStocks = [];
 let authReturnPath = '/home';
+let autoCollectHideTimer = null;
 
 const METRIC_LABELS = {
   PER: '주가수익비율',
@@ -145,6 +161,41 @@ loginForm.addEventListener('submit', async (event) => {
     const payload = formToObject(loginForm);
     const result = await login(payload);
     handleAuthResult(result, '로그인되었습니다.');
+  } catch (error) {
+    showAuthError(error);
+  }
+});
+
+accountEmailForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  setAuthStatus('아이디를 변경하는 중...');
+
+  try {
+    const payload = formToObject(accountEmailForm);
+    const result = await updateAccount({ email: payload.email?.trim() });
+    renderUser(result.user);
+    setAuthStatus('아이디가 변경되었습니다. 확인 메일이 필요한 경우 받은편지함을 확인하세요.');
+    setStatus('아이디가 변경되었습니다.');
+  } catch (error) {
+    showAuthError(error);
+  }
+});
+
+accountPasswordForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  setAuthStatus('비밀번호를 변경하는 중...');
+
+  try {
+    const payload = formToObject(accountPasswordForm);
+    if (payload.password !== payload.passwordConfirm) {
+      throw new Error('새 비밀번호가 서로 일치하지 않습니다.');
+    }
+
+    const result = await updateAccount({ password: payload.password });
+    renderUser(result.user);
+    accountPasswordForm.reset();
+    setAuthStatus('비밀번호가 변경되었습니다.');
+    setStatus('비밀번호가 변경되었습니다.');
   } catch (error) {
     showAuthError(error);
   }
@@ -426,6 +477,7 @@ async function handleStockSelection(stock) {
   startNewChat();
   selectedMetricCode = null;
   enterSummaryView(stock);
+  beginAutoCollectProgress();
   setSummaryLoading();
 
   const tasks = [
@@ -464,6 +516,8 @@ function formToObject(form) {
 function renderUser(user) {
   if (!user) {
     userEl.textContent = '로그인된 사용자가 없습니다.';
+    accountEmailForm.reset();
+    accountPasswordForm.reset();
     authSummaryEl.textContent = '로그인이 필요합니다.';
     topLoginButton.hidden = false;
     logoutButton.hidden = true;
@@ -475,6 +529,8 @@ function renderUser(user) {
     <span>${escapeHtml(user.email)}</span>
     <span>최근 로그인: ${escapeHtml(formatDateTime(user.last_login_at))}</span>
   `;
+  accountEmailForm.elements.email.value = user.email || '';
+  accountPasswordForm.reset();
   authSummaryEl.textContent = `${user.nickname || user.email}님`;
   topLoginButton.hidden = true;
   logoutButton.hidden = false;
@@ -757,6 +813,7 @@ function closeSummary({ updateRoute = true } = {}) {
   chatSessions = [];
   document.body.classList.remove('summary-mode', 'favorites-mode', 'search-mode');
   summaryPanel.hidden = true;
+  hideAutoCollectProgress();
   homeDashboard.hidden = false;
   searchResultsView.hidden = true;
   favoritesView.hidden = true;
@@ -787,6 +844,7 @@ async function loadSummaryFromRoute(stockId) {
     chatSessions = [];
     startNewChat();
     enterSummaryView(selectedStock);
+    beginAutoCollectProgress();
     setSummaryLoading();
     await Promise.all([
       loadStockSummary(selectedStock.stock_id),
@@ -811,6 +869,7 @@ async function loadStockSummary(stockId) {
     selectedSummary = result.data;
     if (selectedSummary.analysis) {
       renderSummary(selectedSummary);
+      setAutoCollectStep('summary', 'done', '저장된 분석 사용');
       setStatus('요약분석을 불러왔습니다.');
       return;
     }
@@ -825,11 +884,13 @@ async function loadStockSummary(stockId) {
 async function autoCollectStockSummary(stockId) {
   if (!getStoredAccessToken()) {
     showSummaryEmpty('저장된 요약분석이 없습니다. 새 분석은 로그인 후 실행할 수 있습니다.');
+    setAutoCollectStep('summary', 'blocked', '로그인 필요');
     setStatus('새 요약분석을 실행하려면 로그인하세요.');
     return;
   }
 
   setSummaryAutoCollecting();
+  setAutoCollectStep('summary', 'collecting', '자동 분석 중');
   setStatus('요약분석 데이터가 없어 자동으로 분석을 실행하는 중...');
 
   try {
@@ -844,6 +905,7 @@ async function autoCollectStockSummary(stockId) {
 
     selectedSummary = result.data;
     renderSummary(selectedSummary);
+    setAutoCollectStep('summary', 'done', result.data.cached ? '저장된 분석 사용' : '자동 분석 완료');
     setStatus(result.data.cached ? '저장된 최신 분석 결과를 불러왔습니다.' : '요약분석을 자동으로 준비했습니다.');
   } catch (error) {
     if (!isSelectedStock(stockId)) {
@@ -851,6 +913,7 @@ async function autoCollectStockSummary(stockId) {
     }
 
     showError(error);
+    setAutoCollectStep('summary', 'failed', '자동 분석 실패');
     showSummaryEmpty();
   }
 }
@@ -865,6 +928,7 @@ async function runSelectedStockAnalysis({ forceRefresh = false } = {}) {
   }
 
   setSummaryLoading();
+  setAutoCollectStep('summary', 'collecting', forceRefresh ? '분석 갱신 중' : '분석 실행 중');
   setStatus(forceRefresh ? '재무 데이터를 확인하고 분석을 갱신하는 중...' : '재무 분석을 실행하는 중...');
 
   try {
@@ -874,9 +938,11 @@ async function runSelectedStockAnalysis({ forceRefresh = false } = {}) {
     });
     selectedSummary = result.data;
     renderSummary(selectedSummary);
+    setAutoCollectStep('summary', 'done', result.data.cached ? '저장된 분석 사용' : '분석 완료');
     setStatus(result.data.cached ? '저장된 최신 분석 결과를 불러왔습니다.' : '새로운 분석 결과를 저장했습니다.');
   } catch (error) {
     showError(error);
+    setAutoCollectStep('summary', 'failed', '분석 실패');
     showSummaryEmpty();
   }
 }
@@ -924,6 +990,7 @@ async function loadStockPrices(stockId) {
     }
 
     renderPriceChart(result.data);
+    setAutoCollectStep('prices', 'done', '저장된 주가 사용');
   } catch (error) {
     if (!isSelectedStock(stockId)) {
       return;
@@ -949,11 +1016,13 @@ function setPriceChartLoading() {
 async function autoCollectStockPrices(stockId) {
   if (!getStoredAccessToken()) {
     showPriceChartEmpty('최근 주가 데이터가 없습니다. 새 수집은 로그인 후 실행할 수 있습니다.');
+    setAutoCollectStep('prices', 'blocked', '로그인 필요');
     setStatus('최근 주가를 새로 수집하려면 로그인하세요.');
     return;
   }
 
   setPriceAutoCollecting();
+  setAutoCollectStep('prices', 'collecting', '자동 수집 중');
   setStatus('최근 주가 데이터가 없어 자동으로 수집하는 중...');
 
   try {
@@ -969,10 +1038,12 @@ async function autoCollectStockPrices(stockId) {
 
     if ((result.data?.prices || []).length) {
       renderPriceChart(result.data);
+      setAutoCollectStep('prices', 'done', result.data.collection?.cacheHit ? '저장된 주가 사용' : '자동 수집 완료');
       setStatus('최근 주가를 자동으로 준비했습니다.');
       return;
     }
 
+    setAutoCollectStep('prices', 'failed', '수집 데이터 없음');
     showPriceChartEmpty('수집된 최근 주가 데이터가 없습니다.');
   } catch (error) {
     if (!isSelectedStock(stockId)) {
@@ -980,6 +1051,7 @@ async function autoCollectStockPrices(stockId) {
     }
 
     showError(error);
+    setAutoCollectStep('prices', 'failed', '자동 수집 실패');
     showPriceChartEmpty('최근 주가 자동 수집에 실패했습니다.');
   }
 }
@@ -1011,6 +1083,7 @@ async function loadStockNews(stockId) {
     }
 
     renderStockNews(result.data.news || []);
+    setAutoCollectStep('news', 'done', '저장된 뉴스 사용');
   } catch (error) {
     if (!isSelectedStock(stockId)) {
       return;
@@ -1024,11 +1097,13 @@ async function loadStockNews(stockId) {
 async function autoCollectStockNews(stockId) {
   if (!getStoredAccessToken()) {
     showNewsEmpty('최근 뉴스 데이터가 없습니다. 새 수집은 로그인 후 실행할 수 있습니다.');
+    setAutoCollectStep('news', 'blocked', '로그인 필요');
     setStatus('최근 뉴스를 새로 수집하려면 로그인하세요.');
     return;
   }
 
   setNewsAutoCollecting();
+  setAutoCollectStep('news', 'collecting', '자동 수집 중');
   setStatus('최근 뉴스가 없어 자동으로 수집하고 AI로 해석하는 중...');
 
   try {
@@ -1041,7 +1116,11 @@ async function autoCollectStockNews(stockId) {
       return;
     }
 
-    renderStockNews(result.data.news || []);
+    const news = result.data.news || [];
+    renderStockNews(news);
+    setAutoCollectStep('news', news.length ? 'done' : 'failed', news.length
+      ? result.data.cacheHit ? '저장된 뉴스 사용' : '자동 수집 완료'
+      : '수집 데이터 없음');
     setStatus(result.data.llm?.fallback
       ? '최근 뉴스를 저장했습니다. AI 연결 문제로 임시 분류를 표시합니다.'
       : '최근 뉴스 분석을 자동으로 준비했습니다.');
@@ -1051,6 +1130,7 @@ async function autoCollectStockNews(stockId) {
     }
 
     showError(error);
+    setAutoCollectStep('news', 'failed', '자동 수집 실패');
     showNewsEmpty('최근 뉴스 자동 수집에 실패했습니다.');
   }
 }
@@ -1066,6 +1146,7 @@ async function refreshSelectedStockNews() {
 
   setNewsLoading();
   newsRefreshButton.disabled = true;
+  setAutoCollectStep('news', 'collecting', '뉴스 갱신 중');
   setStatus('최근 뉴스를 수집하고 AI로 해석하는 중...');
 
   try {
@@ -1073,12 +1154,17 @@ async function refreshSelectedStockNews() {
       limit: 5,
       forceRefresh: true
     });
-    renderStockNews(result.data.news || []);
+    const news = result.data.news || [];
+    renderStockNews(news);
+    setAutoCollectStep('news', news.length ? 'done' : 'failed', news.length
+      ? result.data.cacheHit ? '저장된 뉴스 사용' : '뉴스 갱신 완료'
+      : '수집 데이터 없음');
     setStatus(result.data.llm?.fallback
       ? '최근 뉴스를 저장했습니다. AI 연결 문제로 임시 분류를 표시합니다.'
       : '최근 뉴스와 AI 영향 분석을 갱신했습니다.');
   } catch (error) {
     showError(error);
+    setAutoCollectStep('news', 'failed', '뉴스 갱신 실패');
     showNewsEmpty('최근 뉴스 갱신에 실패했습니다.');
   } finally {
     newsRefreshButton.disabled = false;
@@ -1682,6 +1768,58 @@ function loadingMarkup(message) {
   `;
 }
 
+function beginAutoCollectProgress() {
+  if (autoCollectHideTimer) {
+    clearTimeout(autoCollectHideTimer);
+    autoCollectHideTimer = null;
+  }
+
+  autoCollectPanelEl.hidden = false;
+  autoCollectTitleEl.textContent = '분석 자료를 자동으로 준비하고 있습니다';
+  setAutoCollectStep('summary', 'loading', '캐시 확인 중');
+  setAutoCollectStep('prices', 'loading', '캐시 확인 중');
+  setAutoCollectStep('news', 'loading', '캐시 확인 중');
+}
+
+function finishAutoCollectProgress() {
+  if (autoCollectPanelEl.hidden) {
+    return;
+  }
+
+  const statuses = Object.values(autoCollectStepEls).map((element) => element?.dataset.status);
+  if (statuses.some((status) => status === 'loading' || status === 'collecting')) {
+    return;
+  }
+
+  autoCollectTitleEl.textContent = statuses.some((status) => status === 'failed')
+    ? '일부 자료를 준비하지 못했습니다'
+    : statuses.some((status) => status === 'blocked')
+      ? '로그인이 필요한 자료가 있습니다'
+      : '분석 자료 준비가 완료되었습니다';
+}
+
+function hideAutoCollectProgress() {
+  if (autoCollectHideTimer) {
+    clearTimeout(autoCollectHideTimer);
+    autoCollectHideTimer = null;
+  }
+
+  autoCollectPanelEl.hidden = true;
+}
+
+function setAutoCollectStep(kind, status, message) {
+  const stepEl = autoCollectStepEls[kind];
+  const statusEl = autoCollectStatusEls[kind];
+  if (!stepEl || !statusEl) {
+    return;
+  }
+
+  autoCollectPanelEl.hidden = false;
+  stepEl.dataset.status = status;
+  statusEl.textContent = message;
+  finishAutoCollectProgress();
+}
+
 function isSelectedStock(stockId) {
   return String(selectedStock?.stock_id || '') === String(stockId);
 }
@@ -1804,6 +1942,7 @@ function showHomeView() {
   searchResultsView.hidden = true;
   favoritesView.hidden = true;
   summaryPanel.hidden = true;
+  hideAutoCollectProgress();
   stockSearchResultsEl.innerHTML = '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1815,6 +1954,7 @@ function showSearchView() {
   searchResultsView.hidden = false;
   favoritesView.hidden = true;
   summaryPanel.hidden = true;
+  hideAutoCollectProgress();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1825,6 +1965,7 @@ function showFavoritesView() {
   searchResultsView.hidden = true;
   favoritesView.hidden = false;
   summaryPanel.hidden = true;
+  hideAutoCollectProgress();
 }
 
 function normalizePath(path = `${window.location.pathname}${window.location.search}`) {

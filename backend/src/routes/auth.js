@@ -1,4 +1,4 @@
-import { login, logout, me, signup } from '../services/authService.js';
+import { login, logout, me, signup, updateAccount } from '../services/authService.js';
 import { getBearerToken } from '../utils/authContext.js';
 import { readJsonBody, sendError, sendJson } from '../utils/http.js';
 
@@ -18,6 +18,12 @@ export async function handleAuthRoute(req, res, url) {
 
     if (req.method === 'GET' && url.pathname === '/api/auth/me') {
       sendJson(res, await me(getBearerToken(req)));
+      return;
+    }
+
+    if (req.method === 'PATCH' && url.pathname === '/api/auth/account') {
+      const body = await readJsonBody(req);
+      sendJson(res, await updateAccount(getBearerToken(req), body));
       return;
     }
 
