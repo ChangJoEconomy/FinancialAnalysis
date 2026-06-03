@@ -100,7 +100,8 @@ export async function getStockPrices(stockId, days = 30) {
 export async function collectStockPrices(stockId, payload = {}) {
   return request(`/api/stocks/${stockId}/prices/collect`, {
     method: 'POST',
-    body: payload
+    body: payload,
+    accessToken: getStoredAccessToken()
   });
 }
 
@@ -114,7 +115,8 @@ export async function getStockNews(stockId, limit = 5) {
 export async function refreshStockNews(stockId, payload = {}) {
   return request(`/api/stocks/${stockId}/news/refresh`, {
     method: 'POST',
-    body: payload
+    body: payload,
+    accessToken: getStoredAccessToken()
   });
 }
 

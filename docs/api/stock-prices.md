@@ -111,8 +111,15 @@ GET /api/stocks/1/prices?days=30
 ## POST /api/stocks/:stockId/prices/collect
 
 요약분석 화면에서 최근 주가가 없을 때 자동으로 호출한다. 키움 일봉 데이터를 수집해 캐시에 저장하고, 최근 그래프에 필요한 가격 데이터를 함께 반환한다.
+외부 API 호출 비용과 쿼터 보호를 위해 로그인 사용자만 실행할 수 있다.
 
 요청:
+
+```http
+POST /api/stocks/1/prices/collect
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
 
 ```json
 {

@@ -56,6 +56,7 @@ const favoriteCountEl = document.querySelector('[data-favorite-count]');
 const homeDashboard = document.querySelector('[data-home-dashboard]');
 const favoritesView = document.querySelector('[data-favorites-view]');
 const summaryPanel = document.querySelector('[data-summary-panel]');
+const summaryEmptyMessageEl = summaryPanel.querySelector('[data-summary-empty] p');
 const summaryNameEl = document.querySelector('[data-summary-name]');
 const summaryMetaEl = document.querySelector('[data-summary-meta]');
 const summaryCloseButton = document.querySelector('[data-summary-close]');
@@ -822,6 +823,12 @@ async function loadStockSummary(stockId) {
 }
 
 async function autoCollectStockSummary(stockId) {
+  if (!getStoredAccessToken()) {
+    showSummaryEmpty('저장된 요약분석이 없습니다. 새 분석은 로그인 후 실행할 수 있습니다.');
+    setStatus('새 요약분석을 실행하려면 로그인하세요.');
+    return;
+  }
+
   setSummaryAutoCollecting();
   setStatus('요약분석 데이터가 없어 자동으로 분석을 실행하는 중...');
 
@@ -850,6 +857,10 @@ async function autoCollectStockSummary(stockId) {
 
 async function runSelectedStockAnalysis({ forceRefresh = false } = {}) {
   if (!selectedStock) {
+    return;
+  }
+
+  if (!ensureLoggedInForWrite('재무 분석을 실행하려면 로그인하세요.')) {
     return;
   }
 
@@ -936,6 +947,12 @@ function setPriceChartLoading() {
 }
 
 async function autoCollectStockPrices(stockId) {
+  if (!getStoredAccessToken()) {
+    showPriceChartEmpty('최근 주가 데이터가 없습니다. 새 수집은 로그인 후 실행할 수 있습니다.');
+    setStatus('최근 주가를 새로 수집하려면 로그인하세요.');
+    return;
+  }
+
   setPriceAutoCollecting();
   setStatus('최근 주가 데이터가 없어 자동으로 수집하는 중...');
 
@@ -1005,6 +1022,12 @@ async function loadStockNews(stockId) {
 }
 
 async function autoCollectStockNews(stockId) {
+  if (!getStoredAccessToken()) {
+    showNewsEmpty('최근 뉴스 데이터가 없습니다. 새 수집은 로그인 후 실행할 수 있습니다.');
+    setStatus('최근 뉴스를 새로 수집하려면 로그인하세요.');
+    return;
+  }
+
   setNewsAutoCollecting();
   setStatus('최근 뉴스가 없어 자동으로 수집하고 AI로 해석하는 중...');
 
@@ -1034,6 +1057,10 @@ async function autoCollectStockNews(stockId) {
 
 async function refreshSelectedStockNews() {
   if (!selectedStock) {
+    return;
+  }
+
+  if (!ensureLoggedInForWrite('뉴스를 갱신하려면 로그인하세요.')) {
     return;
   }
 
@@ -1219,9 +1246,21 @@ function renderSummary(summary) {
   }
 }
 
-function showSummaryEmpty() {
+function showSummaryEmpty(message = '저장된 요약분석이 없습니다. 재무 데이터를 확인하고 분석을 실행합니다.') {
+  summaryEmptyMessageEl.textContent = message;
   summaryEmptyEl.hidden = false;
   summaryContentEl.hidden = true;
+}
+
+function ensureLoggedInForWrite(message) {
+  if (getStoredAccessToken()) {
+    return true;
+  }
+
+  openAuthScreen('login');
+  setAuthStatus(message);
+  setStatus(message);
+  return false;
 }
 
 function renderMetricCard(metric) {

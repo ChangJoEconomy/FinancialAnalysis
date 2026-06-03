@@ -1,3 +1,5 @@
+const DEFAULT_MAX_JSON_BODY_BYTES = 1024 * 1024;
+
 export function sendJson(res, body, statusCode = 200) {
   res.writeHead(statusCode, {
     ...corsHeaders(),
@@ -6,16 +8,31 @@ export function sendJson(res, body, statusCode = 200) {
   res.end(JSON.stringify(body));
 }
 
-export async function readJsonBody(req) {
+export async function readJsonBody(req, { maxBytes = DEFAULT_MAX_JSON_BODY_BYTES } = {}) {
   const chunks = [];
+  let totalBytes = 0;
 
   for await (const chunk of req) {
+    totalBytes += chunk.length;
+    if (totalBytes > maxBytes) {
+      throw Object.assign(new Error('Request body is too large.'), {
+        statusCode: 413
+      });
+    }
+
     chunks.push(chunk);
   }
 
   const rawBody = Buffer.concat(chunks).toString('utf8').trim();
   if (!rawBody) {
     return {};
+  }
+
+  const contentType = req.headers['content-type'] || '';
+  if (!String(contentType).toLowerCase().includes('application/json')) {
+    throw Object.assign(new Error('Content-Type must be application/json.'), {
+      statusCode: 415
+    });
   }
 
   try {

@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "check:db": "node src/workers/checkSupabaseConnection.js",
     "seed:stock:samsung": "node src/workers/seedSamsungStock.js",
+    "seed:stocks:krx": "node src/workers/seedKrxListedStocks.js",
     "cache:demo:samsung-dart": "node src/workers/cacheSamsungDartDemo.js",
     "cache:policy:check": "node src/workers/checkCachePolicy.js",
     "dart:collect:samsung": "node src/workers/collectSamsungDartFinancials.js",

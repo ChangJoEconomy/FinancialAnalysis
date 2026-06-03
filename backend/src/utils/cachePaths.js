@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, resolve, relative } from 'node:path';
+import { dirname, isAbsolute, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -15,7 +15,7 @@ export function resolveCachePath(...segments) {
   const filePath = resolve(cacheRoot, ...segments);
   const relativePath = relative(cacheRoot, filePath);
 
-  if (relativePath.startsWith('..')) {
+  if (relativePath.startsWith('..') || isAbsolute(relativePath)) {
     throw new Error('Cache path must stay inside DATA_CACHE_ROOT.');
   }
 

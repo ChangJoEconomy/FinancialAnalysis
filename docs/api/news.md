@@ -55,9 +55,11 @@ GET /api/stocks/1/news?limit=5
 ## POST /api/stocks/:stockId/news/refresh
 
 네이버 검색 API에서 최신 뉴스를 수집하고 Gemini 영향 분석을 저장한다.
+외부 API 호출 비용과 쿼터 보호를 위해 로그인 사용자만 실행할 수 있다.
 
 ```http
 POST /api/stocks/1/news/refresh
+Authorization: Bearer <accessToken>
 Content-Type: application/json
 
 {

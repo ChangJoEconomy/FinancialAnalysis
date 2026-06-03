@@ -125,8 +125,11 @@ GET /api/stocks/1/summary
 
 종목 분석을 실행한다.
 
+인증이 필요하다. 외부 API와 LLM 호출 비용이 발생할 수 있으므로 로그인 사용자만 실행할 수 있다.
+
 ```http
 POST /api/stocks/1/analyze
+Authorization: Bearer <accessToken>
 Content-Type: application/json
 
 {
@@ -172,6 +175,17 @@ GET /api/stocks/1/prices?days=30
 
 키움증권 REST API 수집과 캐시 정책은 `docs/api/stock-prices.md`에 정리했다.
 
+## POST /api/stocks/:stockId/prices/collect
+
+키움증권 REST API에서 일봉을 수집하고 최근 그래프용 데이터를 저장한다.
+인증이 필요하다. 외부 API 호출 비용이 발생할 수 있으므로 로그인 사용자만 실행할 수 있다.
+
+```http
+POST /api/stocks/1/prices/collect
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
 ## GET /api/stocks/:stockId/news
 
 저장된 최근 뉴스와 AI 영향 분석을 조회한다.
@@ -184,8 +198,11 @@ GET /api/stocks/1/news?limit=5
 
 네이버 뉴스 검색 API에서 최신 뉴스를 수집하고 Gemini 영향 분석을 저장한다.
 
+인증이 필요하다. 외부 API와 LLM 호출 비용이 발생할 수 있으므로 로그인 사용자만 실행할 수 있다.
+
 ```http
 POST /api/stocks/1/news/refresh
+Authorization: Bearer <accessToken>
 Content-Type: application/json
 
 {

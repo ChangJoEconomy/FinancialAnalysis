@@ -179,9 +179,7 @@ async function enrichStocksWithDartCompany(stocks, apiKey, concurrency) {
       }
 
       const stock = stocks[index];
-      const details = stock.dart_corp_code
-        ? await fetchDartCompany({ apiKey, corpCode: stock.dart_corp_code })
-        : null;
+      const details = await tryFetchDartCompanyDetails({ apiKey, stock });
       enriched[index] = {
         ...stock,
         ...(details?.corp_name_eng ? { company_name_en: details.corp_name_eng } : {}),
@@ -197,6 +195,19 @@ async function enrichStocksWithDartCompany(stocks, apiKey, concurrency) {
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
   return enriched;
+}
+
+async function tryFetchDartCompanyDetails({ apiKey, stock }) {
+  if (!stock.dart_corp_code) {
+    return null;
+  }
+
+  try {
+    return await fetchDartCompany({ apiKey, corpCode: stock.dart_corp_code });
+  } catch (error) {
+    console.warn(`Skipping OpenDART company enrichment for ${stock.stock_code}: ${error.message}`);
+    return null;
+  }
 }
 
 async function fetchDartCompany({ apiKey, corpCode }) {

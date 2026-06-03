@@ -49,7 +49,7 @@ export async function handleStocksRoute(req, res, url) {
       }
 
       if (req.method === 'POST' && resource === 'analyze') {
-        const authContext = await getOptionalAuthContext(req);
+        const authContext = await requireAuthContext(req);
         const body = await readJsonBody(req);
         sendJson(res, { data: await analyzeStock({ stockId, authContext, payload: body }) });
         return;
@@ -76,6 +76,7 @@ export async function handleStocksRoute(req, res, url) {
       }
 
       if (req.method === 'POST' && resource === 'prices/collect') {
+        await requireAuthContext(req);
         const body = await readJsonBody(req);
         const collection = await collectKiwoomDailyPrices({
           stockId,
@@ -105,6 +106,7 @@ export async function handleStocksRoute(req, res, url) {
       }
 
       if (req.method === 'POST' && resource === 'news/refresh') {
+        await requireAuthContext(req);
         const body = await readJsonBody(req);
         sendJson(res, {
           data: await collectAndAnalyzeStockNews({
